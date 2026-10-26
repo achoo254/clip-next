@@ -152,7 +152,15 @@ export function CreditsPage(): ReactNode {
       </p>
       <p>
         {locale === 'vi' ? 'Hình vẽ của các mẫu thêm sau' : "The art of the templates added later"}
-        : AI-generated with open models (Qwen-Image, Z-Image-Turbo; Apache-2.0) for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0).{' '}
+        : AI-generated with open models (Qwen-Image, Z-Image-Turbo; Apache-2.0) for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0).
+      </p>
+      <p>
+        {locale === 'vi'
+          ? 'Mẫu Lá số tử vi dùng lại hình của app Tử Vi: nền trời sao, huy chương, 12 con giáp và 14 chính tinh'
+          : 'The birth chart template reuses art of the Tử Vi app: the starry sky, the medallion, the 12 zodiac animals and the 14 major stars'}
+        : AI-generated with OpenAI gpt-image for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0).{' '}
+        {locale === 'vi' ? 'Huy hiệu tứ hóa và ngũ hành cục' : 'The tứ hóa and cục emblems'}: AI-generated with open models (FLUX.2 klein 4B; Apache-2.0) for
+        the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0).{' '}
         {locale === 'vi' ? 'Các hình này không thuộc giấy phép MIT của mã nguồn.' : "None of this art is covered by the code's MIT licence."}
       </p>
     </Page>

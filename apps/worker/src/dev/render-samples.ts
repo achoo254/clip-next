@@ -1,6 +1,7 @@
 /**
- * `pnpm --filter @clip/worker render:samples [--templates=a,b] [photo ...]`: one real render per template (default:
- * the first template of each layout) through the worker's own
+ * `pnpm --filter @clip/worker render:samples [--templates=a,b | --url=<link>] [photo ...]`: one real render per
+ * template (default: the first template of each layout; with `--url`, the template of a `/tao?t=…` link, filled in
+ * with the values that link gives the create page) through the worker's own
  * path (queue → claim → hyperframes → ffmpeg → ffprobe check), on a throw-away PGlite database and media directory.
  * Photos given on the command line are cleaned the way the server cleans uploads (ffmpeg, ≤1080 px, no metadata);
  * without any, ffmpeg's test pattern stands in. Prints each render's time and the probed output, and keeps the
@@ -15,13 +16,25 @@ import os from 'node:os';
 import path from 'node:path';
 import { accounts, createJob, mediaLayout, openPglite, renderJobs } from '@clip/db';
 import { eq } from 'drizzle-orm';
-import { isTemplateId, LAYOUT_IDS, templateById, TEMPLATES, type TemplateId } from '@clip/templates';
+import { fieldsFromQuery, isTemplateId, LAYOUT_IDS, templateById, TEMPLATES, validateInput, type TemplateId } from '@clip/templates';
 import { RENDER_TIMEOUT_MS } from '../config';
 import { probeVideo, renderVideo } from '../render';
 import { processNextJob } from '../worker-loop';
 
-/** `--templates=a,b` picks the templates; default one per layout. */
+/** `--url=<link>`: a create-page link (`https://clip…/tao?t=la-so&…`), or null. */
+function linkQuery(args: readonly string[]): URLSearchParams | null {
+  const flag = args.find((a) => a.startsWith('--url='));
+  return flag ? new URL(flag.slice('--url='.length)).searchParams : null;
+}
+
+/** `--templates=a,b` picks the templates; `--url` the link's; default one per layout. */
 function chosenTemplates(args: readonly string[]): TemplateId[] {
+  const link = linkQuery(args);
+  if (link) {
+    const id = link.get('t');
+    if (!isTemplateId(id)) throw new Error(`the link names no known template: ${String(id)}`);
+    return [id];
+  }
   const flag = args.find((a) => a.startsWith('--templates='));
   if (!flag) return LAYOUT_IDS.map((layout) => TEMPLATES.find((t) => t.layout === layout)?.id).filter(isTemplateId);
   const ids = flag.slice('--templates='.length).split(',');
@@ -30,9 +43,16 @@ function chosenTemplates(args: readonly string[]): TemplateId[] {
   return ids.filter(isTemplateId);
 }
 
-/** The template's sample text (its placeholders), as the preview shows it before anything is typed. */
-function sampleFields(templateId: TemplateId): Record<string, string> {
-  return Object.fromEntries(templateById(templateId).fields.map((f) => [f.id, f.required ? f.placeholder.vi : '']));
+/**
+ * The template's sample text (its placeholders), as the preview shows it before anything is typed, overridden by the
+ * values a `--url` link fills in; checked as the server checks a job.
+ */
+function sampleFields(templateId: TemplateId, link: URLSearchParams | null): Record<string, string> {
+  const spec = templateById(templateId);
+  const fields = { ...Object.fromEntries(spec.fields.map((f) => [f.id, f.required || f.choices ? f.placeholder.vi : ''])), ...(link ? fieldsFromQuery(spec, link) : {}) };
+  const checked = validateInput(templateId, fields, spec.photos.min);
+  if (!checked.ok) throw new Error(`fields refused: ${checked.error} ${checked.field ?? ''}`);
+  return { ...checked.fields };
 }
 
 function ffmpeg(args: readonly string[]): void {
@@ -45,6 +65,7 @@ const media = mediaLayout(dir);
 await mkdir(media.tmp, { recursive: true });
 const sources = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const templates = chosenTemplates(process.argv.slice(2));
+const link = linkQuery(process.argv.slice(2));
 const handle = await openPglite();
 const log = { info: (m: string) => console.log(m), warn: (m: string) => console.warn(m) };
 try {
@@ -61,7 +82,7 @@ try {
       const input = source ? ['-i', source] : ['-f', 'lavfi', '-i', `testsrc2=s=${1600 - i * 300}x1200`];
       ffmpeg([...input, '-frames:v', '1', '-vf', scale, '-map_metadata', '-1', '-q:v', '3', '-f', 'image2', media.photo(id, i)]);
     }
-    const created = await createJob(handle.db, { id, accountId: account.id, templateId, fields: sampleFields(templateId), photoCount: photos }, new Date());
+    const created = await createJob(handle.db, { id, accountId: account.id, templateId, fields: sampleFields(templateId, link), photoCount: photos }, new Date());
     if (!created.ok) throw new Error(`queue refused: ${created.reason}`);
     const outcome = await processNextJob({
       db: handle.db,
@@ -73,7 +94,7 @@ try {
     const [row] = await handle.db.select().from(renderJobs).where(eq(renderJobs.id, id));
     const probed = outcome === 'done' ? probeVideo(media.video(id)) : null;
     console.log(
-      JSON.stringify({ templateId, outcome, error: row?.error ?? null, renderMs: row?.renderMs ?? null, photos, file: media.video(id), probed }),
+      JSON.stringify({ templateId, fields: sampleFields(templateId, link), outcome, error: row?.error ?? null, renderMs: row?.renderMs ?? null, photos, file: media.video(id), probed }),
     );
   }
 } finally {

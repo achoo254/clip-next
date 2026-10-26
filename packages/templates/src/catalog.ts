@@ -8,6 +8,12 @@
 export type Locale = 'vi' | 'en';
 export type Localized = Readonly<Record<Locale, string>>;
 
+/** One allowed value of a choice field: an id the composition maps to a bundled asset, and its name. */
+export interface Choice {
+  readonly id: string;
+  readonly label: Localized;
+}
+
 export interface TextField {
   /** Composition variable id. */
   readonly id: string;
@@ -15,13 +21,18 @@ export interface TextField {
   readonly placeholder: Localized;
   readonly maxLength: number;
   readonly required: boolean;
+  /**
+   * A choice field holds one of these ids (or "" when optional) instead of free text: the composition turns it into
+   * the path of one of the theme's own pictures, so only whitelisted ids may ever reach it.
+   */
+  readonly choices?: readonly Choice[];
 }
 
 /**
  * A layout is one composition (`project/layouts/<id>.html` + `project/scripts/<id>.js`): its timing, its text
  * fields and photo slots. Every template is a layout dressed in a theme; the variable contract belongs to the layout.
  */
-export const LAYOUT_IDS = ['greeting', 'quick', 'quote'] as const;
+export const LAYOUT_IDS = ['greeting', 'quick', 'quote', 'chart'] as const;
 export type LayoutId = (typeof LAYOUT_IDS)[number];
 
 interface FieldShape {
@@ -29,6 +40,7 @@ interface FieldShape {
   readonly label: Localized;
   readonly maxLength: number;
   readonly required: boolean;
+  readonly choices?: readonly Choice[];
 }
 
 export interface LayoutSpec {
@@ -41,6 +53,56 @@ export interface LayoutSpec {
 
 const line = (n: number): FieldShape => ({ id: `line${n}`, label: { vi: `Dòng ${n}`, en: `Line ${n}` }, maxLength: 60, required: true });
 const point = (n: number, required: boolean): FieldShape => ({ id: `point${n}`, label: { vi: `Ý ${n}`, en: `Point ${n}` }, maxLength: 80, required });
+
+/** A choice field: its length limit is that of its longest id. */
+function choice(id: string, label: Localized, required: boolean, choices: readonly Choice[]): FieldShape {
+  return { id, label, maxLength: Math.max(...choices.map((c) => c.id.length)), required, choices };
+}
+
+/** The 12 con giáp (Vietnamese zodiac: Mão is the cat, Sửu the buffalo); ids as in themes/la-so/animal-<id>.webp. */
+export const ZODIAC_CHOICES: readonly Choice[] = [
+  { id: 'ty', label: { vi: 'Tý (Chuột)', en: 'Tý (Rat)' } },
+  { id: 'suu', label: { vi: 'Sửu (Trâu)', en: 'Sửu (Buffalo)' } },
+  { id: 'dan', label: { vi: 'Dần (Hổ)', en: 'Dần (Tiger)' } },
+  { id: 'mao', label: { vi: 'Mão (Mèo)', en: 'Mão (Cat)' } },
+  { id: 'thin', label: { vi: 'Thìn (Rồng)', en: 'Thìn (Dragon)' } },
+  { id: 'ti', label: { vi: 'Tỵ (Rắn)', en: 'Tỵ (Snake)' } },
+  { id: 'ngo', label: { vi: 'Ngọ (Ngựa)', en: 'Ngọ (Horse)' } },
+  { id: 'mui', label: { vi: 'Mùi (Dê)', en: 'Mùi (Goat)' } },
+  { id: 'than', label: { vi: 'Thân (Khỉ)', en: 'Thân (Monkey)' } },
+  { id: 'dau', label: { vi: 'Dậu (Gà)', en: 'Dậu (Rooster)' } },
+  { id: 'tuat', label: { vi: 'Tuất (Chó)', en: 'Tuất (Dog)' } },
+  { id: 'hoi', label: { vi: 'Hợi (Lợn)', en: 'Hợi (Pig)' } },
+];
+
+const same = (name: string): Localized => ({ vi: name, en: name });
+
+/** The 14 chính tinh (major stars); ids as in themes/la-so/star-<id>.webp. */
+export const STAR_CHOICES: readonly Choice[] = [
+  { id: 'tu-vi', label: same('Tử Vi') },
+  { id: 'thien-co', label: same('Thiên Cơ') },
+  { id: 'thai-duong', label: same('Thái Dương') },
+  { id: 'vu-khuc', label: same('Vũ Khúc') },
+  { id: 'thien-dong', label: same('Thiên Đồng') },
+  { id: 'liem-trinh', label: same('Liêm Trinh') },
+  { id: 'thien-phu', label: same('Thiên Phủ') },
+  { id: 'thai-am', label: same('Thái Âm') },
+  { id: 'tham-lang', label: same('Tham Lang') },
+  { id: 'cu-mon', label: same('Cự Môn') },
+  { id: 'thien-tuong', label: same('Thiên Tướng') },
+  { id: 'thien-luong', label: same('Thiên Lương') },
+  { id: 'that-sat', label: same('Thất Sát') },
+  { id: 'pha-quan', label: same('Phá Quân') },
+];
+
+/** The five cục (element classes); ids as in themes/la-so/cuc-<id>.webp. */
+export const CUC_CHOICES: readonly Choice[] = [
+  { id: 'thuy-nhi', label: same('Thủy Nhị Cục') },
+  { id: 'moc-tam', label: same('Mộc Tam Cục') },
+  { id: 'kim-tu', label: same('Kim Tứ Cục') },
+  { id: 'tho-ngu', label: same('Thổ Ngũ Cục') },
+  { id: 'hoa-luc', label: same('Hỏa Lục Cục') },
+];
 
 export const LAYOUTS: Readonly<Record<LayoutId, LayoutSpec>> = {
   greeting: { id: 'greeting', durationSeconds: 12, photos: { min: 1, max: 3 }, fields: [line(1), line(2), line(3)] },
@@ -64,6 +126,22 @@ export const LAYOUTS: Readonly<Record<LayoutId, LayoutSpec>> = {
     fields: [
       { id: 'quote', label: { vi: 'Câu trích dẫn', en: 'Quote' }, maxLength: 160, required: true },
       { id: 'author', label: { vi: 'Tác giả', en: 'Author' }, maxLength: 40, required: false },
+    ],
+  },
+  // A birth chart (lá số tử vi) as a card: the zodiac animal, the major star of the Mệnh palace and the cục emblem
+  // are pictures chosen by id; the words around them are typed (or filled in by the Tử Vi app's link).
+  chart: {
+    id: 'chart',
+    durationSeconds: 18,
+    photos: { min: 0, max: 0 },
+    fields: [
+      { id: 'name', label: { vi: 'Tên', en: 'Name' }, maxLength: 40, required: false },
+      line(1),
+      line(2),
+      { id: 'reading', label: { vi: 'Lời luận giải', en: 'Reading' }, maxLength: 160, required: true },
+      choice('animal', { vi: 'Con giáp', en: 'Zodiac animal' }, true, ZODIAC_CHOICES),
+      choice('star', { vi: 'Chính tinh ở Mệnh', en: 'Major star in Mệnh' }, false, STAR_CHOICES),
+      choice('cuc', { vi: 'Cục', en: 'Cục (element class)' }, true, CUC_CHOICES),
     ],
   },
 };
@@ -125,6 +203,7 @@ export const TEMPLATE_IDS = [
   'chuc-ngu-ngon',
   'dong-vien',
   'xin-loi',
+  'la-so',
 ] as const;
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 
@@ -691,6 +770,30 @@ const ENTRIES: readonly ThemeEntry[] = [
       author: { vi: 'Tên của bạn', en: 'Your name' },
     },
   },
+  {
+    id: 'la-so',
+    layout: 'chart',
+    theme: 'la-so',
+    music: 'chillin-poupi',
+    occasions: ['share'],
+    name: { vi: 'Lá số tử vi', en: 'Tử Vi birth chart' },
+    description: {
+      vi: 'Con giáp, chính tinh ở Mệnh và cục của lá số, kèm một câu luận giải. Mở từ lá số trên tuvi.hoandat.com thì mọi ô được điền sẵn.',
+      en: 'Your zodiac animal, the major star of your Mệnh palace and your cục, with one line of reading. Opened from a chart on tuvi.hoandat.com, every field is filled in.',
+    },
+    samples: {
+      name: { vi: '', en: '' },
+      line1: { vi: 'Tuổi Mùi · Mệnh Thiên Đồng', en: 'Year of the Goat · Mệnh Thiên Đồng' },
+      line2: { vi: 'Mộc Tam Cục', en: 'Mộc Tam Cục' },
+      reading: {
+        vi: 'Thiên Đồng ở Mệnh mang đến tính cách hiền hòa, dễ mến và một tâm thế lạc quan hiếm có.',
+        en: 'Thiên Đồng in Mệnh brings a gentle, likeable nature and a rare optimism.',
+      },
+      animal: { vi: 'mui', en: 'mui' },
+      star: { vi: 'thien-dong', en: 'thien-dong' },
+      cuc: { vi: 'moc-tam', en: 'moc-tam' },
+    },
+  },
 ];
 
 export const TEMPLATES: readonly TemplateSpec[] = ENTRIES.map((entry) => {
@@ -757,6 +860,35 @@ export function normalizeText(value: string): string {
   return value.normalize('NFC').replace(CONTROL, ' ').replace(/\s+/g, ' ').trim();
 }
 
+/** Whether `value` may fill `field`: any text for a text field, one of its ids for a choice field. */
+export function isAllowedChoice(field: TextField, value: string): boolean {
+  return field.choices === undefined || field.choices.some((c) => c.id === value);
+}
+
+/**
+ * Field values a link may fill in (`/tao?t=la-so&animal=mui&line1=…`): for each field of the template, its query
+ * parameter when valid — a choice among the field's ids, text within the field's limit after normalizeText, or
+ * empty for an optional field. Anything else (unknown parameters, ids, too long text, an empty required field) is
+ * left out, so the person starts from the template's samples there.
+ * Values stay plain text: the compositions only ever set them as textContent or map ids to bundled pictures.
+ */
+export function fieldsFromQuery(spec: TemplateSpec, query: { get(name: string): string | null }): Record<string, string> {
+  const fields: Record<string, string> = {};
+  for (const field of spec.fields) {
+    const raw = query.get(field.id);
+    if (raw === null) continue;
+    const value = normalizeText(raw);
+    // An empty optional field is a choice too (no name; no major star in Mệnh), not a missing one.
+    if (value === '') {
+      if (!field.required) fields[field.id] = '';
+      continue;
+    }
+    if ([...value].length > field.maxLength || !isAllowedChoice(field, value)) continue;
+    fields[field.id] = value;
+  }
+  return fields;
+}
+
 /**
  * Checks a job's text fields and photo count against its template. Unknown field ids are refused rather than
  * dropped, so a client out of step with the server notices.
@@ -774,6 +906,7 @@ export function validateInput(templateId: unknown, fields: unknown, photoCount: 
     const value = given.get(field.id) ?? '';
     if (field.required && value === '') return { ok: false, error: 'missing-field', field: field.id };
     if ([...value].length > field.maxLength) return { ok: false, error: 'field-too-long', field: field.id };
+    if (value !== '' && !isAllowedChoice(field, value)) return { ok: false, error: 'invalid-fields', field: field.id };
     clean[field.id] = value;
   }
   if (photoCount < spec.photos.min) return { ok: false, error: 'too-few-photos' };

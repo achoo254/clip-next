@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { isTemplateId, normalizeText, templateById, validateInput, type LayoutId, type TemplateId } from '@clip/templates';
+import {
+  fieldsFromQuery,
+  isAllowedChoice,
+  isTemplateId,
+  normalizeText,
+  templateById,
+  validateInput,
+  type LayoutId,
+  type Locale,
+  type TemplateId,
+  type TemplateSpec,
+  type TextField,
+} from '@clip/templates';
 import { createJob, signInUrl } from '../api';
 import { useAccount } from '../account';
 import { errorMessage } from '../error-message';
@@ -34,8 +46,22 @@ function loadDrafts(): Drafts {
 }
 
 /** The template's placeholders, so the preview shows a full video before anything is typed. */
-function sampleFields(id: TemplateId, locale: 'vi' | 'en'): Record<string, string> {
+function sampleFields(id: TemplateId, locale: Locale): Record<string, string> {
   return Object.fromEntries(templateById(id).fields.map((f) => [f.id, f.required ? f.placeholder[locale] : '']));
+}
+
+/** Whether the address carries values for the template's fields (a link that fills it in). */
+function linkFills(spec: TemplateSpec, params: URLSearchParams): boolean {
+  return spec.fields.some((f) => params.has(f.id));
+}
+
+/**
+ * The value of a choice field: what was picked (or filled in by a link), else the template's sample, so the select,
+ * the preview and the render agree before the person touches it. "" (optional fields only) means none.
+ */
+function choiceValue(field: TextField, stored: string | undefined, locale: Locale): string {
+  if (stored !== undefined && (stored === '' ? !field.required : isAllowedChoice(field, stored))) return stored;
+  return field.placeholder[locale];
 }
 
 export function CreatePage(): ReactNode {
@@ -46,11 +72,28 @@ export function CreatePage(): ReactNode {
   const requested = params.get('t');
   const templateId: TemplateId = isTemplateId(requested) ? requested : 'chuc-mung';
   const spec = templateById(templateId);
-  const [drafts, setDrafts] = useState<Drafts>(loadDrafts);
+  // A link may fill the template in (`/tao?t=la-so&animal=mui&line1=…`, e.g. from the Tử Vi app): its valid values
+  // replace this layout's draft when the page opens.
+  const [drafts, setDrafts] = useState<Drafts>(() => {
+    const saved = loadDrafts();
+    return linkFills(spec, params) ? { ...saved, [spec.layout]: fieldsFromQuery(spec, params) } : saved;
+  });
   const [photos, setPhotos] = useState<readonly Photo[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const fields = useMemo(() => drafts[spec.layout] ?? {}, [drafts, spec.layout]);
+
+  // The filled-in values then leave the address, so a later sign-in round trip keeps what was edited since.
+  useEffect(() => {
+    if (linkFills(spec, params)) setParams({ t: templateId }, { replace: true });
+  }, [params, setParams, spec, templateId]);
+
+  // Opened from such a link, the page starts at the filled-in template rather than at the top of the template grid.
+  const [openedFromLink] = useState(() => linkFills(spec, params));
+  const filledRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (openedFromLink) filledRef.current?.scrollIntoView({ block: 'start' });
+  }, [openedFromLink]);
 
   useEffect(() => {
     try {
@@ -71,7 +114,9 @@ export function CreatePage(): ReactNode {
   const photoUrls = useMemo(() => usable.map((p) => p.url), [usable]);
   const previewFields = useMemo(() => {
     const sample = sampleFields(templateId, locale);
-    return Object.fromEntries(spec.fields.map((f) => [f.id, normalizeText(fields[f.id] ?? '') || sample[f.id] || '']));
+    return Object.fromEntries(
+      spec.fields.map((f) => [f.id, f.choices ? choiceValue(f, fields[f.id], locale) : normalizeText(fields[f.id] ?? '') || sample[f.id] || '']),
+    );
   }, [fields, spec, templateId, locale]);
 
   const setField = (id: string, value: string): void => setDrafts((d) => ({ ...d, [spec.layout]: { ...(d[spec.layout] ?? {}), [id]: value } }));
@@ -96,7 +141,7 @@ export function CreatePage(): ReactNode {
   const submit = async (event: FormEvent): Promise<void> => {
     event.preventDefault();
     setMessage(null);
-    const typed = Object.fromEntries(spec.fields.map((f) => [f.id, fields[f.id] ?? '']));
+    const typed = Object.fromEntries(spec.fields.map((f) => [f.id, f.choices ? choiceValue(f, fields[f.id], locale) : (fields[f.id] ?? '')]));
     const check = validateInput(templateId, typed, usable.length);
     if (!check.ok) {
       const code = check.error === 'missing-field' || check.error === 'field-too-long' || check.error === 'too-few-photos' ? check.error : 'generic';
@@ -119,11 +164,30 @@ export function CreatePage(): ReactNode {
       <div className="create-grid">
         <form className="card create-form" onSubmit={(e) => void submit(e)} data-id="create-form">
           <TemplatePicker value={templateId} onChange={(id) => setParams({ t: id }, { replace: true })} />
-          <p className="muted small">{spec.description[locale]}</p>
+          <p className="muted small template-description" ref={filledRef}>
+            {spec.description[locale]}
+          </p>
 
           {spec.fields.map((field) => {
-            const value = fields[field.id] ?? '';
             const id = `field-${field.id}`;
+            if (field.choices) {
+              return (
+                <div className="field" key={field.id}>
+                  <label className="label" htmlFor={id}>
+                    {field.label[locale]}
+                  </label>
+                  <select id={id} className="input" value={choiceValue(field, fields[field.id], locale)} onChange={(e) => setField(field.id, e.target.value)} data-id={id}>
+                    {field.required ? null : <option value="">{t('create.none')}</option>}
+                    {field.choices.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label[locale]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            }
+            const value = fields[field.id] ?? '';
             return (
               <div className="field" key={field.id}>
                 <label className="label" htmlFor={id}>

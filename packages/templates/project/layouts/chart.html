@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi" data-composition-variables='[
+  {"id":"name","type":"string","label":"Tên","default":""},
+  {"id":"line1","type":"string","label":"Dòng 1","default":"Tuổi Mùi · Mệnh Thiên Đồng"},
+  {"id":"line2","type":"string","label":"Dòng 2","default":"Mộc Tam Cục"},
+  {"id":"reading","type":"string","label":"Lời luận giải","default":"Thiên Đồng ở Mệnh mang đến tính cách hiền hòa, dễ mến và một tâm thế lạc quan hiếm có."},
+  {"id":"animal","type":"string","label":"Con giáp","default":"mui"},
+  {"id":"star","type":"string","label":"Chính tinh ở Mệnh","default":"thien-dong"},
+  {"id":"cuc","type":"string","label":"Cục","default":"moc-tam"}
+]'>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1080, height=1920" />
+<title>Chart</title>
+<!-- The theme: colours (theme.css) and AI-drawn art (background, medallion, the zodiac animals, star and cục emblems). -->
+<link rel="stylesheet" href="themes/{{theme}}/theme.css" />
+<style>
+  @font-face { font-family: "Be Vietnam Pro"; src: url("assets/fonts/BeVietnamPro-ExtraBold.ttf") format("truetype"); font-weight: 800; }
+  @font-face { font-family: "Be Vietnam Pro"; src: url("assets/fonts/BeVietnamPro-SemiBold.ttf") format("truetype"); font-weight: 600; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--base); font-family: "Be Vietnam Pro", sans-serif; color: var(--ink); }
+  #stage { position: absolute; inset: 0; }
+  #bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 40%; animation: kenburns 18s linear 0s both; }
+  #name { position: absolute; left: 90px; right: 90px; top: 150px; text-align: center; font-weight: 600; font-size: 56px; line-height: 1.2; color: var(--ink-soft); overflow-wrap: anywhere; }
+  #name.empty { display: none; }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  #scene-1 { opacity: 1; }
+  /* The medallion with the picture of the scene in its centre. */
+  .hero { position: absolute; left: 160px; top: 290px; width: 760px; height: 760px; }
+  .hero .ring { position: absolute; inset: 0; width: 100%; height: 100%; animation: spin 40s linear 0s infinite both; }
+  .hero .pic { position: absolute; left: 130px; top: 130px; width: 500px; height: 500px; object-fit: contain; }
+  /* The cục emblem beside the star in scene 2 (when the chart has a major star in Mệnh). */
+  #cuc-badge { position: absolute; right: 70px; top: 870px; width: 260px; height: 260px; }
+  #cuc-badge img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .line {
+    position: absolute; left: 80px; right: 80px; top: 1170px; text-align: center; font-weight: 800; line-height: 1.15;
+    text-shadow: var(--ink-shadow); overflow-wrap: anywhere;
+  }
+  /* Scene 3: the three pictures in a row, then the reading on a translucent panel (legibility only). */
+  #row { position: absolute; left: 0; right: 0; top: 440px; display: flex; justify-content: center; gap: 30px; }
+  #row img { display: block; width: 280px; height: 280px; object-fit: contain; }
+  #card { position: absolute; left: 70px; right: 70px; top: 820px; padding: 64px 60px; border-radius: 48px; background: var(--panel); }
+  #reading { font-weight: 800; line-height: 1.3; overflow-wrap: anywhere; color: var(--ink); }
+  #line1-again { margin-top: 40px; font-weight: 600; font-size: 44px; line-height: 1.25; color: var(--accent); overflow-wrap: anywhere; }
+  .sticker { position: absolute; }
+  /* Each sticker sits in a box of its slot, whatever its shape. */
+  .sticker img { display: block; width: 100%; height: 100%; object-fit: contain; animation: float 3.4s ease-in-out 0s infinite alternate both; }
+  #sticker-1 { left: 30px; top: 1560px; width: 200px; height: 200px; }
+  #sticker-2 { right: 30px; top: 1600px; width: 190px; height: 190px; }
+  #sticker-3 { left: 445px; top: 1650px; width: 190px; height: 190px; }
+  #sticker-2 img { animation-delay: -1.7s; }
+  #sticker-3 img { animation-delay: -0.8s; }
+  @keyframes kenburns { from { transform: scale(1.02); } to { transform: scale(1.12) translateY(-30px); } }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes float { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-20px) rotate(3deg); } }
+  @keyframes scene-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes scene-out { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes pop { 0% { transform: scale(0.7); opacity: 0; } 70% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes rise { from { transform: translateY(60px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes sticker-in { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="chart" data-start="0" data-duration="18" data-width="1080" data-height="1920" data-no-timeline>
+  <div id="stage" class="clip" data-start="0" data-duration="18" data-track-index="0" data-theme-dir="themes/{{theme}}/">
+    <img id="bg" src="themes/{{theme}}/bg.webp" alt="" data-layout-allow-overflow />
+    <!-- Scenes 1 and 2 share the medallion; the script puts the animal, then the star (or cục) in its centre. -->
+    <div id="hero" class="hero">
+      <img class="ring" src="themes/{{theme}}/medallion.webp" alt="" />
+    </div>
+    <section id="scene-1" class="scene">
+      <h1 id="line1" class="line"></h1>
+    </section>
+    <section id="scene-2" class="scene">
+      <div id="cuc-badge"></div>
+      <h1 id="line2" class="line"></h1>
+    </section>
+    <section id="scene-3" class="scene">
+      <div id="row"></div>
+      <div id="card">
+        <p id="reading"></p>
+        <p id="line1-again"></p>
+      </div>
+    </section>
+    <p id="name"></p>
+    <div id="sticker-1" class="sticker"><img src="themes/{{theme}}/sticker-1.webp" alt="" /></div>
+    <div id="sticker-2" class="sticker"><img src="themes/{{theme}}/sticker-2.webp" alt="" /></div>
+    <div id="sticker-3" class="sticker"><img src="themes/{{theme}}/sticker-3.webp" alt="" /></div>
+  </div>
+  <audio id="music" data-start="0" data-duration="18" data-volume="0.6" data-fade-in="0.5" data-fade-out="1.5" src="assets/music/{{music}}.m4a"></audio>
+</div>
+<script src="scripts/common.js"></script>
+<script src="scripts/chart.js"></script>
+</body>
+</html>

@@ -604,3 +604,8 @@ button {
   padding-left: var(--space-5);
   overflow-wrap: anywhere;
 }
+
+/* Where a link that fills a template in lands: below the sticky top bar (two rows tall on phones). */
+.template-description {
+  scroll-margin-top: calc(2 * var(--topbar-h));
+}

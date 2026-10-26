@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { composeTemplateHtml, compositionVariables, templateById, type LayoutId, type TemplateId } from '@clip/templates';
+import chart from '@clip/templates/project/layouts/chart.html?raw';
 import greeting from '@clip/templates/project/layouts/greeting.html?raw';
 import quick from '@clip/templates/project/layouts/quick.html?raw';
 import quote from '@clip/templates/project/layouts/quote.html?raw';
 import { useI18n } from '../i18n';
 import { previewDocument, RUNTIME_SRC } from './composition-doc';
 
-const LAYOUT_HTML: Readonly<Record<LayoutId, string>> = { greeting, quick, quote };
+const LAYOUT_HTML: Readonly<Record<LayoutId, string>> = { greeting, quick, quote, chart };
 
 /** Typing pauses this long before the preview reloads. */
 const DEBOUNCE_MS = 400;

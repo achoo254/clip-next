@@ -4,16 +4,20 @@ import { describe, expect, it } from 'vitest';
 import {
   composeTemplateHtml,
   compositionVariables,
+  CUC_CHOICES,
+  fieldsFromQuery,
   isTemplateId,
   LAYOUT_IDS,
   LAYOUTS,
   MAX_DURATION_SECONDS,
   normalizeText,
   OCCASIONS,
+  STAR_CHOICES,
   TEMPLATE_IDS,
   TEMPLATES,
   templateById,
   validateInput,
+  ZODIAC_CHOICES,
 } from './catalog';
 import { PROJECT_DIR } from './project';
 
@@ -45,6 +49,68 @@ describe('validateInput', () => {
     expect(decomposed.length).toBeGreaterThan(9);
     expect(normalizeText(decomposed)).toBe('Chúc mừng');
     expect(normalizeText(' a\n\tb\u0000 ')).toBe('a b');
+  });
+});
+
+describe('the birth chart template (la-so)', () => {
+  const chart = { name: '', line1: 'Tuổi Mùi · Mệnh Thiên Đồng', line2: 'Mộc Tam Cục', reading: 'Hiền hòa.', animal: 'mui', star: 'thien-dong', cuc: 'moc-tam' };
+
+  it('accepts whitelisted picture ids and no major star', () => {
+    expect(validateInput('la-so', chart, 0)).toEqual({ ok: true, templateId: 'la-so', fields: chart });
+    expect(validateInput('la-so', { ...chart, star: '' }, 0)).toMatchObject({ ok: true, fields: { star: '' } });
+  });
+
+  it('refuses ids outside the whitelist, paths included, and a missing animal or cục', () => {
+    for (const [field, value] of [
+      ['animal', 'cat'],
+      ['animal', '../../etc/passwd'],
+      ['star', 'tu vi'],
+      ['star', 'tuvi'],
+      ['cuc', 'moc'],
+    ] as const) {
+      expect(validateInput('la-so', { ...chart, [field]: value }, 0), `${field}=${value}`).toMatchObject({ ok: false });
+    }
+    expect(validateInput('la-so', { ...chart, animal: '' }, 0)).toEqual({ ok: false, error: 'missing-field', field: 'animal' });
+    expect(validateInput('la-so', { ...chart, cuc: '' }, 0)).toEqual({ ok: false, error: 'missing-field', field: 'cuc' });
+  });
+
+  it('fills fields from a link, keeping only valid values as plain text', () => {
+    const query = new URLSearchParams({
+      t: 'la-so',
+      animal: 'mui',
+      star: 'thien-dong',
+      cuc: 'nope',
+      name: '  <b>Lan</b>\n',
+      line1: 'Tuổi Mùi'.normalize('NFD'),
+      line2: 'x'.repeat(61),
+      reading: 'Hiền hòa.',
+      birth: '1991-05-04',
+    });
+    expect(fieldsFromQuery(templateById('la-so'), query)).toEqual({
+      animal: 'mui',
+      star: 'thien-dong',
+      name: '<b>Lan</b>',
+      line1: 'Tuổi Mùi',
+      reading: 'Hiền hòa.',
+    });
+  });
+
+  it('keeps an empty optional field from a link as a choice, but not an empty required one', () => {
+    expect(fieldsFromQuery(templateById('la-so'), new URLSearchParams('star=&name=&animal=&line1='))).toEqual({ star: '', name: '' });
+    expect(fieldsFromQuery(templateById('la-so'), new URLSearchParams(''))).toEqual({});
+  });
+
+  it('has a picture for every id it accepts', () => {
+    const dir = path.join(PROJECT_DIR, 'themes', templateById('la-so').theme);
+    const files = [
+      'medallion.webp',
+      ...ZODIAC_CHOICES.map((c) => `animal-${c.id}.webp`),
+      ...STAR_CHOICES.map((c) => `star-${c.id}.webp`),
+      ...CUC_CHOICES.map((c) => `cuc-${c.id}.webp`),
+    ];
+    for (const file of files) expect(existsSync(path.join(dir, file)), file).toBe(true);
+    expect([ZODIAC_CHOICES.length, STAR_CHOICES.length, CUC_CHOICES.length]).toEqual([12, 14, 5]);
+    for (const c of [...ZODIAC_CHOICES, ...STAR_CHOICES, ...CUC_CHOICES]) expect(c.id).toMatch(/^[a-z]+(-[a-z]+)*$/);
   });
 });
 

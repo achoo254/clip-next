@@ -1,0 +1,12 @@
+/* Lá số: Tử Vi's pale starry sky and medallion; deep violet text, Tử Vi's violet as accent. */
+:root {
+  --base: #e9def3;
+  --ink: #2a1b5c;
+  --ink-soft: #45367f;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.7);
+  --accent: #5b47ad;
+  --shade: rgba(233, 222, 243, 0.7);
+  --panel: rgba(255, 255, 255, 0.72);
+  --track: rgba(42, 27, 92, 0.2);
+  --frame-inset: 0;
+}
