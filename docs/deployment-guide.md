@@ -103,8 +103,8 @@ không bị mất video vì một lần deploy.
 - **Tốc độ:** với ffmpeg có libx264 (`FFMPEG_PATH`), trên Mac M4 các mẫu mất khoảng 2 giây render cho 1 giây video
   (Tết 12 giây: 24 giây; Chuyến đi 18 giây: 36 giây; Cảm ơn 10 giây: 19 giây). Không có libx264 thì đường WebM chậm
   khoảng 5 lần (xem mục Env). Đo lại trên `.65` sau khi cài ffmpeg tĩnh.
-- **Thêm mẫu:** một thư mục chủ đề mới trong `packages/templates/project/themes/<chủ-đề>/` (`bg.webp` 1024×1536,
-  `thumb.webp`, `sticker-1..3.webp`, `frame.webp` với bố cục chúc mừng, `theme.css` với màu và khoảng hở của khung)
+- **Thêm mẫu:** một thư mục chủ đề mới trong `packages/templates/project/themes/<chủ-đề>/` (`bg.webp` dọc 2:3 hoặc
+  9:16, ví dụ 1024×1536 hay 864×1536, `thumb.webp` 240×360, `sticker-1..3.webp`, `frame.webp` với bố cục chúc mừng, `theme.css` với màu và khoảng hở của khung)
   và một mục trong `ENTRIES` của `packages/templates/src/catalog.ts`; test kiểm đủ tệp, `pnpm check:templates` kiểm
   composition. Không đổi id mẫu đã có: job trong DB tham chiếu id.
 - **Nâng hyperframes:** đổi phiên bản ở `apps/worker/package.json` và `apps/web/package.json` (player, core) cùng

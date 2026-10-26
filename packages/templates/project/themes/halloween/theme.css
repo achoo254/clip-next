@@ -1,0 +1,13 @@
+/* Halloween: purple night, an orange moon, pumpkins and friendly bats; white text on a deep purple veil. */
+:root {
+  --base: #2a1446;
+  --ink: #ffffff;
+  --ink-soft: rgba(255, 255, 255, 0.82);
+  --ink-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
+  --accent: #ff9f43;
+  --shade: rgba(42, 20, 70, 0.82);
+  --panel: rgba(42, 20, 70, 0.78);
+  --track: rgba(255, 255, 255, 0.2);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 12.3% 10.2% 13.4% 13.5%;
+}

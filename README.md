@@ -72,5 +72,6 @@ Xem [`docs/deployment-guide.md`](docs/deployment-guide.md).
 ## Giấy phép
 
 Mã nguồn: MIT ([`LICENSE`](LICENSE)). Font, nhạc, hình vẽ của các mẫu và biểu tượng app **không** thuộc giấy
-phép MIT; xem [`assets/CREDITS.md`](assets/CREDITS.md). Hình vẽ của các mẫu và biểu tượng app: AI-generated with
-OpenAI gpt-image for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0).
+phép MIT; xem [`assets/CREDITS.md`](assets/CREDITS.md). Biểu tượng app và hình vẽ của 12 mẫu đầu: AI-generated
+with OpenAI gpt-image for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0). Hình vẽ của các mẫu
+thêm sau: AI-generated with open models (Qwen-Image, Z-Image-Turbo; Apache-2.0) for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0).

@@ -1,0 +1,13 @@
+/* Housewarming: warm beige wall, green plants and string lights; deep green-brown text on a light veil. */
+:root {
+  --base: #e2dbce;
+  --ink: #2f3a1f;
+  --ink-soft: #55603f;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #b5651d;
+  --shade: rgba(226, 219, 206, 0.92);
+  --panel: rgba(226, 219, 206, 0.86);
+  --track: rgba(47, 58, 31, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 12.3% 12.3% 13.1% 13.5%;
+}

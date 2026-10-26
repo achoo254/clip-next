@@ -1,0 +1,13 @@
+/* Anniversary: burgundy and champagne gold, deep red roses and candlelight; white text on a deep wine veil. */
+:root {
+  --base: #4a0d16;
+  --ink: #ffffff;
+  --ink-soft: rgba(255, 255, 255, 0.82);
+  --ink-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
+  --accent: #f0c987;
+  --shade: rgba(74, 13, 22, 0.82);
+  --panel: rgba(74, 13, 22, 0.78);
+  --track: rgba(255, 255, 255, 0.2);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 10.5% 9.6% 11.7% 10.2%;
+}

@@ -1,0 +1,13 @@
+/* Baby milestones: pastel mint, blue and pink clouds, stars and toys; deep blue text on a light veil. */
+:root {
+  --base: #deede7;
+  --ink: #1f3a5f;
+  --ink-soft: #4a6283;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #e0679a;
+  --shade: rgba(222, 237, 231, 0.92);
+  --panel: rgba(222, 237, 231, 0.86);
+  --track: rgba(31, 58, 95, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 11.7% 10.7% 11.2% 10.7%;
+}

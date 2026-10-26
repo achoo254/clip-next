@@ -1,0 +1,13 @@
+/* Apology: pastel blue sky, pink clouds, hearts and daisies; deep blue-violet text on a light veil. */
+:root {
+  --base: #f1eef7;
+  --ink: #2b2a5e;
+  --ink-soft: #4f4e80;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #b8457a;
+  --shade: rgba(241, 238, 247, 0.92);
+  --panel: rgba(241, 238, 247, 0.86);
+  --track: rgba(43, 42, 94, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 0;
+}

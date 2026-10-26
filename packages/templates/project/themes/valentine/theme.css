@@ -1,0 +1,13 @@
+/* Valentine's Day: crimson hearts, roses and gold confetti; white text on a deep wine veil. */
+:root {
+  --base: #5a0a18;
+  --ink: #ffffff;
+  --ink-soft: rgba(255, 255, 255, 0.82);
+  --ink-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
+  --accent: #ffd27a;
+  --shade: rgba(90, 10, 24, 0.82);
+  --panel: rgba(90, 10, 24, 0.78);
+  --track: rgba(255, 255, 255, 0.2);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 11.6% 10.4% 12.0% 11.3%;
+}

@@ -1,0 +1,13 @@
+/* Product showcase: pastel peach and mint studio with podiums and boxes; deep teal text on a light veil. */
+:root {
+  --base: #f8e4d0;
+  --ink: #0e3b44;
+  --ink-soft: #2f5c63;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #c4470a;
+  --shade: rgba(248, 228, 208, 0.92);
+  --panel: rgba(248, 228, 208, 0.86);
+  --track: rgba(14, 59, 68, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 0;
+}

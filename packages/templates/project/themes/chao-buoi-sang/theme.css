@@ -1,0 +1,13 @@
+/* Good morning: warm sunrise, sunflowers and coffee; deep brown text on a light veil. */
+:root {
+  --base: #fbefd6;
+  --ink: #4a2a10;
+  --ink-soft: #6e4a2a;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #b35c00;
+  --shade: rgba(251, 239, 214, 0.92);
+  --panel: rgba(251, 239, 214, 0.86);
+  --track: rgba(74, 42, 16, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 0;
+}

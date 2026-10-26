@@ -9,6 +9,7 @@ import {
   LAYOUTS,
   MAX_DURATION_SECONDS,
   normalizeText,
+  OCCASIONS,
   TEMPLATE_IDS,
   TEMPLATES,
   templateById,
@@ -55,6 +56,18 @@ describe('templates', () => {
     }
     expect(new Set(TEMPLATES.map((t) => t.id)).size).toBe(TEMPLATES.length);
     expect(TEMPLATES.map((t) => t.id)).toEqual([...TEMPLATE_IDS]);
+  });
+
+  it('show sample text that a person could have typed (within each field limit)', () => {
+    for (const spec of TEMPLATES) {
+      for (const field of spec.fields) {
+        for (const text of [field.placeholder.vi, field.placeholder.en]) expect([...text].length, `${spec.id}.${field.id}`).toBeLessThanOrEqual(field.maxLength);
+      }
+    }
+  });
+
+  it('leave no occasion filter empty', () => {
+    for (const occasion of OCCASIONS) expect(TEMPLATES.some((t) => t.occasions.includes(occasion)), occasion).toBe(true);
   });
 
   it('keep the ids stored on existing jobs', () => {

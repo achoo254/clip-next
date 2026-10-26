@@ -1,0 +1,13 @@
+/* Camping: misty mountains at sunrise, pines, a tent and a campfire; deep forest green text on a light veil. */
+:root {
+  --base: #eef0e2;
+  --ink: #1f3a24;
+  --ink-soft: #46604a;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #d9480f;
+  --shade: rgba(238, 240, 226, 0.92);
+  --panel: rgba(238, 240, 226, 0.86);
+  --track: rgba(31, 58, 36, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 0;
+}

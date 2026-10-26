@@ -1,0 +1,13 @@
+/* Hiring: bright professional blue office with plants; deep navy text on a light veil. */
+:root {
+  --base: #c3d5db;
+  --ink: #12305e;
+  --ink-soft: #3a5480;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #1864ab;
+  --shade: rgba(195, 213, 219, 0.92);
+  --panel: rgba(195, 213, 219, 0.86);
+  --track: rgba(18, 48, 94, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 0;
+}

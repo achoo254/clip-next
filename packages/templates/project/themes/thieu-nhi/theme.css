@@ -1,0 +1,13 @@
+/* Children's Day: sky blue with balloons, kites and a rainbow; deep navy text on a light veil. */
+:root {
+  --base: #a9dbf2;
+  --ink: #12305e;
+  --ink-soft: #3a5480;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #e8590c;
+  --shade: rgba(169, 219, 242, 0.92);
+  --panel: rgba(169, 219, 242, 0.86);
+  --track: rgba(18, 48, 94, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 10.9% 8.4% 9.7% 8.5%;
+}

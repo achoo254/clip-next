@@ -1,0 +1,13 @@
+/* Encouragement: sunny orange rays over a road to the summit; deep brown text on a warm light veil. */
+:root {
+  --base: #fdebd0;
+  --ink: #4a1f05;
+  --ink-soft: #6e3d1a;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #d9480f;
+  --shade: rgba(253, 235, 208, 0.92);
+  --panel: rgba(253, 235, 208, 0.86);
+  --track: rgba(74, 31, 5, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 0;
+}

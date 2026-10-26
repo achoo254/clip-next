@@ -1,0 +1,13 @@
+/* Pets: pastel yellow and sky blue with paw prints and bones; deep brown text on a light veil. */
+:root {
+  --base: #eff3e8;
+  --ink: #3d2a14;
+  --ink-soft: #65503a;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #e8590c;
+  --shade: rgba(239, 243, 232, 0.92);
+  --panel: rgba(239, 243, 232, 0.86);
+  --track: rgba(61, 42, 20, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 8.3% 7.0% 8.3% 6.9%;
+}

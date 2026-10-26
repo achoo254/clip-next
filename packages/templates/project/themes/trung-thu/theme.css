@@ -1,0 +1,13 @@
+/* Mid-Autumn: navy night, a golden full moon and lanterns; white text on a deep navy veil. */
+:root {
+  --base: #12203f;
+  --ink: #ffffff;
+  --ink-soft: rgba(255, 255, 255, 0.82);
+  --ink-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
+  --accent: #ffc94d;
+  --shade: rgba(18, 32, 63, 0.82);
+  --panel: rgba(18, 32, 63, 0.78);
+  --track: rgba(255, 255, 255, 0.2);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 17.4% 15.0% 12.2% 14.7%;
+}
