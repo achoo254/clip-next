@@ -1,13 +1,14 @@
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
-import { claimNextJob, createJob, DAILY_RENDER_LIMIT, markJobDone, renderJobs, type Db } from '@clip/db';
+import { accounts, claimNextJob, createJob, DAILY_RENDER_LIMIT, markJobDone, renderJobs, type Db } from '@clip/db';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ORIGIN, startTestApp, type TestApp } from '../test-support';
+import { CREATE_LIMIT, MAX_QUEUED_JOBS } from './job-routes';
 
-/** A real JPEG of `width`×`height` from ffmpeg, with an EXIF block (camera make "SECRETCAM") spliced in. */
-function jpegWithExif(width: number, height: number): Buffer {
-  const out = spawnSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', `testsrc2=s=${width}x${height}`, '-frames:v', '1', '-f', 'mjpeg', 'pipe:1'], {
+/** A real JPEG of `width`×`height` from ffmpeg (`source`: an ffmpeg lavfi source), with an EXIF block (camera make "SECRETCAM") spliced in. */
+function jpegWithExif(width: number, height: number, source = 'testsrc2'): Buffer {
+  const out = spawnSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', `${source}=s=${width}x${height}`, '-frames:v', '1', '-f', 'mjpeg', 'pipe:1'], {
     maxBuffer: 64 * 1024 * 1024,
   });
   if (out.status !== 0) throw new Error(`ffmpeg: ${out.stderr.toString()}`);
@@ -158,6 +159,58 @@ describe('POST /api/jobs', () => {
     expect(await app.handle.db.select().from(renderJobs)).toHaveLength(DAILY_RENDER_LIMIT);
     const list = await app.http().get('/api/jobs').set('Cookie', cookie);
     expect(list.body.limits).toMatchObject({ perDay: DAILY_RENDER_LIMIT, usedToday: DAILY_RENDER_LIMIT });
+  });
+});
+
+describe('protection of the shared server', () => {
+  const post = (cookie: string) =>
+    app.http().post('/api/jobs').set('Cookie', cookie).set('Origin', ORIGIN).field('templateId', 'trich-dan').field('fields', JSON.stringify(QUOTE));
+
+  it('refuses pictures over 24 MP before decoding them', async () => {
+    const { cookie } = await app.signIn('sub-1');
+    const res = await app
+      .http()
+      .post('/api/jobs')
+      .set('Cookie', cookie)
+      .set('Origin', ORIGIN)
+      .field('templateId', 'chuc-mung')
+      .field('fields', JSON.stringify(WISHES))
+      .attach('photos', jpegWithExif(6000, 4100, 'color'), { filename: 'big.jpg', contentType: 'image/jpeg' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('photo-too-big');
+  });
+
+  it('turns new jobs away with 503 server-busy when the queue is full', async () => {
+    const now = new Date();
+    for (let i = 0; i < MAX_QUEUED_JOBS; i += 1) {
+      const [account] = await app.handle.db.insert(accounts).values({ sub: `q${i}`, createdAt: now }).returning();
+      if (!account) throw new Error('no account');
+      await createJob(app.handle.db, { id: randomUUID(), accountId: account.id, templateId: 'trich-dan', fields: QUOTE, photoCount: 0 }, now);
+    }
+    const res = await post((await app.signIn('late')).cookie);
+    expect(res.status).toBe(503);
+    expect(res.body).toEqual({ error: 'server-busy' });
+  });
+
+  it('turns new jobs away when the media disk is nearly full', async () => {
+    await app.close();
+    app = await startTestApp({}, { freeBytes: async () => 1024 ** 3 });
+    const res = await post((await app.signIn('sub-1')).cookie);
+    expect(res.status).toBe(503);
+    expect(res.body).toEqual({ error: 'server-busy' });
+  });
+
+  it('limits render requests per account, refused ones included', async () => {
+    const { cookie } = await app.signIn('sub-1');
+    const statuses: number[] = [];
+    for (let i = 0; i <= CREATE_LIMIT.limit; i += 1) statuses.push((await post(cookie)).status);
+    // The first is queued, the next ones wait for it (429 job-in-progress), the one past the limit is cut off.
+    expect(statuses[0]).toBe(201);
+    const last = await post(cookie);
+    expect(last.status).toBe(429);
+    expect(last.body.error).toBe('too-many-requests');
+    // Another account is not affected.
+    expect((await post((await app.signIn('sub-2')).cookie)).status).toBe(201);
   });
 });
 

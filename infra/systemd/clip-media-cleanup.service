@@ -1,16 +1,24 @@
-# /etc/systemd/system/clip-media-cleanup.service — deletes videos older than 7 days, and leftovers of uploads and
-# renders (the server and worker remove those themselves; this catches a crash). Run by clip-media-cleanup.timer.
+# /etc/systemd/system/clip-media-cleanup.service — retention, run hourly by clip-media-cleanup.timer:
+# - jobs (the person's text) at their expiry date, 7 days after they were made, with their video and photos;
+# - expired or unused sessions; video files no job owns;
+# - leftovers of uploads and renders the server and worker normally remove themselves (a crash).
 [Unit]
-Description=Delete expired Clip videos and stale temporary files
+Description=Delete expired Clip jobs, videos and sessions
+After=postgresql.service
 
 [Service]
 Type=oneshot
 User=clip
 Group=clip
-ExecStart=/usr/bin/find /var/www/clip/media/videos -type f -name *.mp4 -mmin +10080 -delete
+EnvironmentFile=/etc/clip/production.env
+WorkingDirectory=/var/www/clip/app
+ExecStart=/opt/node22/bin/node --enable-source-maps apps/worker/dist/cleanup.mjs
 ExecStart=/usr/bin/find /var/www/clip/media/inputs -mindepth 1 -maxdepth 1 -mmin +1440 -exec rm -rf {} +
 ExecStart=/usr/bin/find /var/www/clip/media/tmp -mindepth 1 -maxdepth 1 -mmin +720 -exec rm -rf {} +
-NoNewPrivileges=true
+IPAddressDeny=any
+IPAddressAllow=localhost
+NoNewPrivileges=yes
+PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/var/www/clip/media

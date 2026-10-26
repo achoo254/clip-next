@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { rm } from 'node:fs/promises';
+import { rm, statfs } from 'node:fs/promises';
 import {
   checkJobAllowed,
   createJob,
@@ -8,6 +8,7 @@ import {
   isJobId,
   listJobs,
   nextVietnamDayStart,
+  queuedCount,
   rendersToday,
   type CreateJobResult,
   type Db,
@@ -16,6 +17,7 @@ import {
 } from '@clip/db';
 import { MAX_PHOTOS, validateInput } from '@clip/templates';
 import express, { type RequestHandler, type Router } from 'express';
+import { rateLimit } from 'express-rate-limit';
 import multer from 'multer';
 import { accountOf, requireAccount } from '../auth/auth-routes';
 import type { ServerConfig } from '../config';
@@ -26,6 +28,23 @@ import { cleanPhoto, PhotoError, sniffPhotoType } from './photo-cleaning';
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 /** Where nginx serves the videos from (an `internal` location aliasing MEDIA_DIR/videos/). */
 export const ACCEL_VIDEO_PREFIX = '/_clip_media/videos/';
+/** Jobs waiting for the single worker beyond which new ones are turned away (503 server-busy). */
+export const MAX_QUEUED_JOBS = 20;
+/** Free space under MEDIA_DIR below which new jobs are turned away (503 server-busy). */
+export const MIN_FREE_BYTES = 2 * 1024 ** 3;
+/** Render requests per account per window, whatever their outcome (refused ones included). */
+export const CREATE_LIMIT = { windowMs: 10 * 60_000, limit: 10 };
+
+/** Bytes free for unprivileged users on the file system holding `dir`. */
+export async function freeBytes(dir: string): Promise<number> {
+  const fs = await statfs(dir);
+  return fs.bavail * fs.bsize;
+}
+
+export interface JobRouteOptions {
+  /** Free-space probe of MEDIA_DIR; tests replace it. */
+  readonly freeBytes?: (dir: string) => Promise<number>;
+}
 
 /** A job as the web app sees it. */
 export interface JobView {
@@ -88,18 +107,34 @@ function parseFields(raw: unknown): unknown {
   }
 }
 
-export function jobRoutes(config: ServerConfig, db: Db, media: MediaLayout): Router {
+export function jobRoutes(config: ServerConfig, db: Db, media: MediaLayout, options: JobRouteOptions = {}): Router {
   const router = express.Router();
   const signedIn = requireAccount(config, db);
+  const probeFree = options.freeBytes ?? freeBytes;
+  /** Accounts with a render request being processed right now: one at a time per account. */
+  const inFlight = new Set<string>();
 
-  // Limits are checked before the upload is read, so a refused request costs no photo processing.
+  const perAccount = rateLimit({
+    ...CREATE_LIMIT,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    keyGenerator: (_req, res) => accountOf(res.locals),
+    handler: (_req, _res, next) => next(new HttpError(429, 'too-many-requests')),
+  });
+
+  // Every limit is checked before the upload is read, so a refused request costs no photo processing.
   const allowed: RequestHandler = async (_req, res, next) => {
-    const refused = await checkJobAllowed(db, accountOf(res.locals), new Date());
+    const accountId = accountOf(res.locals);
+    if (inFlight.has(accountId)) throw new HttpError(429, 'job-in-progress');
+    const refused = await checkJobAllowed(db, accountId, new Date());
     if (refused && !refused.ok) throw refusal(refused);
+    if ((await queuedCount(db)) >= MAX_QUEUED_JOBS || (await probeFree(media.root)) < MIN_FREE_BYTES) throw new HttpError(503, 'server-busy');
+    inFlight.add(accountId);
+    res.on('close', () => inFlight.delete(accountId));
     next();
   };
 
-  router.post('/api/jobs', signedIn, allowed, readUpload, async (req, res) => {
+  router.post('/api/jobs', signedIn, perAccount, allowed, readUpload, async (req, res) => {
     const accountId = accountOf(res.locals);
     const body: unknown = req.body;
     const { templateId, fields } = typeof body === 'object' && body !== null ? (body as { templateId?: unknown; fields?: unknown }) : {};

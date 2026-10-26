@@ -31,6 +31,8 @@ export interface RenderOptions {
   readonly chromePath?: string;
   /** Hard stop for the whole render; the job is failed when it is reached. */
   readonly timeoutMs: number;
+  /** Aborts the render (the worker is stopping): the tools are killed and the render rejects with `aborted`. */
+  readonly signal?: AbortSignal;
 }
 
 export interface RenderResult {
@@ -42,7 +44,7 @@ export interface RenderResult {
 /** A render failure with a stable code (stored on the job) and the tail of the tool's output (logged only). */
 export class RenderError extends Error {
   constructor(
-    readonly code: 'render-failed' | 'encode-failed' | 'timeout' | 'bad-output',
+    readonly code: 'render-failed' | 'encode-failed' | 'timeout' | 'aborted' | 'bad-output',
     readonly detail: string,
   ) {
     super(code);
@@ -59,10 +61,18 @@ export function hyperframesBin(): string {
   return path.join(path.dirname(pkg), 'bin', 'hyperframes.mjs');
 }
 
-/** Environment for hyperframes: no telemetry, update checks, skill downloads or automatic installs; our Chrome. */
+/** What of the worker's own environment the tools may see: nothing secret (no DATABASE_URL, no client secret). */
+const PASSED_ENV = ['PATH', 'HOME', 'TMPDIR', 'LANG', 'LC_ALL', 'TZ'] as const;
+
+/**
+ * Environment for hyperframes, Chrome and ffmpeg: a minimal one (the worker's env holds the database password and
+ * the sign-in secret, which a compromised renderer must not read); no telemetry, update checks, skill downloads or
+ * automatic installs; our Chrome.
+ */
 export function hyperframesEnv(chromePath: string | undefined): NodeJS.ProcessEnv {
+  const passed = Object.fromEntries(PASSED_ENV.flatMap((key) => (process.env[key] === undefined ? [] : [[key, process.env[key]]])));
   return {
-    ...process.env,
+    ...passed,
     HYPERFRAMES_NO_TELEMETRY: '1',
     DO_NOT_TRACK: '1',
     HYPERFRAMES_NO_UPDATE_CHECK: '1',
@@ -89,34 +99,74 @@ function niced(command: string, args: readonly string[]): [string, string[]] {
   return process.platform === 'linux' ? ['nice', ['-n', '15', command, ...args]] : [command, [...args]];
 }
 
-/** Runs a tool to completion; rejects with the last lines of its output. Killed (SIGKILL) at `deadline`. */
-function run(command: string, args: readonly string[], env: NodeJS.ProcessEnv, deadline: number, code: RenderError['code']): Promise<void> {
+/** Time a killed tool gets to clean up (puppeteer closes Chrome on SIGTERM) before the group gets SIGKILL. */
+export const KILL_GRACE_MS = 10_000;
+
+/** Signals the tool's whole process group (it leads one: spawned detached); a group already gone is fine. */
+function signalGroup(pid: number | undefined, signal: NodeJS.Signals): void {
+  if (pid === undefined) return;
+  try {
+    process.kill(-pid, signal);
+  } catch {
+    // Already exited.
+  }
+}
+
+export interface RunOptions {
+  readonly env: NodeJS.ProcessEnv;
+  /** Epoch ms at which the tool is killed and the run rejects with `timeout`. */
+  readonly deadline: number;
+  /** Error code when the tool exits non-zero. */
+  readonly code: RenderError['code'];
+  readonly signal?: AbortSignal;
+  readonly graceMs?: number;
+}
+
+/**
+ * Runs a tool to completion; rejects with the last lines of its output. The tool leads its own process group, so a
+ * timeout or an abort reaches everything it started that stayed in the group (ffmpeg, helpers): SIGTERM first, so
+ * hyperframes can close the Chrome it launched (Chrome has a group of its own), then SIGKILL after the grace period.
+ */
+export function runTool(command: string, args: readonly string[], options: RunOptions): Promise<void> {
   const [bin, binArgs] = niced(command, args);
+  const grace = options.graceMs ?? KILL_GRACE_MS;
   return new Promise((resolve, reject) => {
-    const child = spawn(bin, binArgs, { env, stdio: ['ignore', 'pipe', 'pipe'] });
+    if (options.signal?.aborted) return reject(new RenderError('aborted', 'aborted before start'));
+    const child = spawn(bin, binArgs, { env: options.env, stdio: ['ignore', 'pipe', 'pipe'], detached: true });
     let output = '';
     const keep = (chunk: Buffer): void => {
       output = (output + chunk.toString()).slice(-4_000);
     };
     child.stdout.on('data', keep);
     child.stderr.on('data', keep);
-    let timedOut = false;
-    const timer = setTimeout(
-      () => {
-        timedOut = true;
-        child.kill('SIGKILL');
-      },
-      Math.max(0, deadline - Date.now()),
-    );
-    child.on('error', (error) => {
+    let stopped: 'timeout' | 'aborted' | null = null;
+    let killTimer: NodeJS.Timeout | null = null;
+    const stop = (why: 'timeout' | 'aborted'): void => {
+      if (stopped) return;
+      stopped = why;
+      signalGroup(child.pid, 'SIGTERM');
+      killTimer = setTimeout(() => signalGroup(child.pid, 'SIGKILL'), grace);
+    };
+    const timer = setTimeout(() => stop('timeout'), Math.max(0, options.deadline - Date.now()));
+    const onAbort = (): void => stop('aborted');
+    options.signal?.addEventListener('abort', onAbort, { once: true });
+    const done = (): void => {
       clearTimeout(timer);
-      reject(new RenderError(code, error.message));
+      options.signal?.removeEventListener('abort', onAbort);
+    };
+    child.on('error', (error) => {
+      done();
+      reject(new RenderError(options.code, error.message));
     });
     child.on('close', (exit) => {
-      clearTimeout(timer);
-      if (timedOut) reject(new RenderError('timeout', output.slice(-800)));
-      else if (exit === 0) resolve();
-      else reject(new RenderError(code, `exit ${String(exit)}: ${output.slice(-800)}`));
+      done();
+      // Whatever the tool left in its group goes too.
+      if (stopped) {
+        signalGroup(child.pid, 'SIGKILL');
+        if (killTimer) clearTimeout(killTimer);
+        reject(new RenderError(stopped, output.slice(-800)));
+      } else if (exit === 0) resolve();
+      else reject(new RenderError(options.code, `exit ${String(exit)}: ${output.slice(-800)}`));
     });
   });
 }
@@ -168,7 +218,7 @@ export async function renderVideo(input: RenderInput, options: RenderOptions): P
 
     const env = hyperframesEnv(options.chromePath);
     const webm = path.join(workDir, 'render.webm');
-    await run(
+    await runTool(
       process.execPath,
       [
         hyperframesBin(),
@@ -188,13 +238,11 @@ export async function renderVideo(input: RenderInput, options: RenderOptions): P
         '--output',
         webm,
       ],
-      env,
-      deadline,
-      'render-failed',
+      { env, deadline, code: 'render-failed', signal: options.signal },
     );
 
     const mp4 = path.join(workDir, 'video.mp4');
-    await run(
+    await runTool(
       'ffmpeg',
       [
         '-v',
@@ -215,9 +263,7 @@ export async function renderVideo(input: RenderInput, options: RenderOptions): P
         '+faststart',
         mp4,
       ],
-      env,
-      deadline,
-      'encode-failed',
+      { env, deadline, code: 'encode-failed', signal: options.signal },
     );
 
     const probed = probeVideo(mp4);

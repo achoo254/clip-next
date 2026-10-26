@@ -40,6 +40,12 @@ export async function rendersToday(db: Db, accountId: string, now: Date): Promis
   return row?.n ?? 0;
 }
 
+/** Jobs waiting for the worker, all accounts together. */
+export async function queuedCount(db: Db): Promise<number> {
+  const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(renderJobs).where(eq(renderJobs.status, 'queued'));
+  return row?.n ?? 0;
+}
+
 /** Whether the account may queue a render now, before any upload is processed. */
 export async function checkJobAllowed(db: Db, accountId: string, now: Date): Promise<CreateJobResult | null> {
   const [active] = await db
@@ -123,6 +129,14 @@ export async function markJobFailed(db: Db, jobId: string, error: string, now: D
   await db
     .update(renderJobs)
     .set({ status: 'failed', error, finishedAt: now })
+    .where(and(eq(renderJobs.id, jobId), eq(renderJobs.status, 'rendering')));
+}
+
+/** Puts a rendering job back in the queue (its worker is stopping); it is rendered again from the start. */
+export async function requeueJob(db: Db, jobId: string): Promise<void> {
+  await db
+    .update(renderJobs)
+    .set({ status: 'queued', startedAt: null })
     .where(and(eq(renderJobs.id, jobId), eq(renderJobs.status, 'rendering')));
 }
 

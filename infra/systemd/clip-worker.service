@@ -8,25 +8,36 @@ Wants=network-online.target postgresql.service
 [Service]
 User=clip
 Group=clip
-# DATABASE_URL, MEDIA_DIR, CHROME_PATH (the shared env file; the worker ignores the server-only keys).
+# DATABASE_URL, MEDIA_DIR, CHROME_PATH (the shared env file). The worker hands hyperframes, Chrome and ffmpeg a
+# minimal environment of their own (apps/worker/src/render.ts), never this file's secrets.
 EnvironmentFile=/etc/clip/production.env
 WorkingDirectory=/var/www/clip/app
 ExecStart=/opt/node22/bin/node --enable-source-maps apps/worker/dist/main.mjs
+# A render that times out makes the worker exit 1: the restart clears whatever the render left in the cgroup.
 Restart=on-failure
 RestartSec=5
 # The shared server keeps its other apps running: one Chrome, capped memory and CPU, low priority.
 MemoryMax=1500M
 CPUQuota=150%
 Nice=15
-# A render takes minutes; a stop waits for the job in hand (a job cut short is failed as stuck later).
-TimeoutStopSec=600
+# Stop: SIGTERM to the worker only; it aborts the render in hand (its tools get SIGTERM, SIGKILL 10 s later), puts
+# the job back in the queue and exits. Whatever is still in the cgroup then gets SIGKILL. A restart therefore never
+# fails a user's job; the next worker renders it again from the start.
+KillMode=mixed
+TimeoutStopSec=60
 # Chrome needs a writable home for its profile and caches.
 StateDirectory=clip-worker
 Environment=HOME=/var/lib/clip-worker
 UMask=0027
+# Loopback only: Postgres is on 127.0.0.1, and hyperframes' file server (it listens on every interface, with no
+# option to change it) and Chrome must not be reachable from outside or reach out. The box firewall does not
+# block high ports.
+IPAddressDeny=any
+IPAddressAllow=localhost
+NoNewPrivileges=yes
+PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=true
-PrivateTmp=true
 ReadWritePaths=/var/www/clip/media
 
 [Install]

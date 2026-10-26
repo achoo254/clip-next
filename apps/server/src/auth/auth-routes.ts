@@ -5,7 +5,7 @@ import type { Db } from '@clip/db';
 import express, { type RequestHandler, type Router } from 'express';
 import type { AuthConfig, ServerConfig } from '../config';
 import { HttpError } from '../http-error';
-import { codeChallenge, newLoginState, openState, safeReturnPath, sealState, subFromIdToken } from './oidc-login';
+import { codeChallenge, newLoginState, openState, safeReturnPath, sealState, subFromIdToken, withLoginResult } from './oidc-login';
 import { accountForSub, clearSessionCookie, createSession, deleteSession, readCookie, readSessionToken, sessionAccount, setSessionCookie } from './session';
 
 const STATE_COOKIE = 'clip_login';
@@ -34,13 +34,6 @@ function discoveryCache(issuer: string): () => Promise<Discovery> {
     cached = { at: Date.now(), doc };
     return doc;
   };
-}
-
-/** `path` with `login=<result>` added to its query. */
-function withLoginResult(path: string, result: string): string {
-  const url = new URL(path, 'http://local');
-  url.searchParams.set('login', result);
-  return `${url.pathname}${url.search}`;
 }
 
 async function exchangeCode(auth: AuthConfig, discovery: Discovery, code: string, verifier: string): Promise<{ status: number; idToken: string | null }> {

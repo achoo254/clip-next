@@ -27,7 +27,10 @@ hyperframes tua được), chữ dùng font Be Vietnam Pro tự host, nhạc CC0
   `job-in-progress`, UI hiện lời nhắn.
 - Ảnh: tối đa 3, mỗi ảnh ≤ 5 MB, chỉ JPEG/PNG/WebP (kiểm magic bytes); server dùng ffmpeg thu về ≤ 1080 px và bỏ
   toàn bộ metadata (EXIF, GPS) rồi mới lưu; ảnh bị xoá ngay khi render xong.
-- Video tự xoá sau 7 ngày (timer systemd mỗi giờ); job đang render quá 10 phút bị đánh `failed`.
+- Toàn server: tối đa 20 job đang chờ và phải còn ≥ 2 GB trống ở `MEDIA_DIR`, nếu không job mới nhận 503
+  `server-busy`; mỗi tài khoản 10 yêu cầu render mỗi 10 phút; ảnh tối đa 24 MP, mỗi lần giải mã 2 ảnh.
+- Job (cả chữ), video và ảnh bị xoá đúng 7 ngày sau khi tạo (timer systemd mỗi giờ); phiên hết hạn cũng bị xoá.
+  Job đang render quá 10 phút bị đánh `failed`; dừng worker thì job đang render được đưa về hàng đợi.
 
 ## Chạy ở máy dev
 

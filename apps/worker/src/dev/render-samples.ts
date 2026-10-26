@@ -63,7 +63,7 @@ try {
       db: handle.db,
       media,
       log,
-      render: (input) => renderVideo(input, { chromePath: process.env.CHROME_PATH, timeoutMs: RENDER_TIMEOUT_MS }),
+      render: (input, signal) => renderVideo(input, { chromePath: process.env.CHROME_PATH, timeoutMs: RENDER_TIMEOUT_MS, signal }),
     });
     const [row] = await handle.db.select().from(renderJobs).where(eq(renderJobs.id, id));
     const probed = outcome === 'done' ? probeVideo(media.video(id)) : null;

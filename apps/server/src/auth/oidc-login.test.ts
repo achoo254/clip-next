@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { codeChallenge, newLoginState, openState, safeReturnPath, sealState, subFromIdToken } from './oidc-login';
+import { codeChallenge, newLoginState, openState, safeReturnPath, sealState, subFromIdToken, withLoginResult } from './oidc-login';
 
 const KEY = 'k'.repeat(40);
 const b64 = (value: unknown): string => Buffer.from(JSON.stringify(value)).toString('base64url');
@@ -17,7 +17,20 @@ describe('sign-in state', () => {
 
   it('only returns to local paths', () => {
     expect(safeReturnPath('/tao?t=ke-nhanh')).toBe('/tao?t=ke-nhanh');
-    for (const bad of ['https://evil.example', '//evil.example', '/\\evil', 'tao', 42]) expect(safeReturnPath(bad)).toBe('/');
+    expect(safeReturnPath('/video#x')).toBe('/video');
+    // Encoded slashes stay inside the path: the browser does not decode them into a host.
+    expect(safeReturnPath('/%2F%2Fevil.com')).toBe('/%2F%2Fevil.com');
+    const bad = ['https://evil.com', '//evil.com', '/\\evil.com', '/.//evil.com', '/..//evil.com', '/%2e%2e//evil.com', '/%2E//evil.com', '%2F%2Fevil.com', '/tao\n', '/a\u0000', 'tao', 42, null];
+    for (const value of bad) expect(safeReturnPath(value), String(value)).toBe('/');
+  });
+
+  it('never builds a redirect off the site when adding the sign-in result', () => {
+    expect(withLoginResult('/tao?t=x', 'fail')).toBe('/tao?t=x&login=fail');
+    for (const value of ['/.//evil.com', '//evil.com', '/\\evil.com', '/%2e%2e//evil.com']) {
+      const out = withLoginResult(value, 'fail');
+      expect(out, value).toBe('/?login=fail');
+      expect(new URL(out, 'https://clip.example').origin).toBe('https://clip.example');
+    }
   });
 
   it('derives the S256 PKCE challenge (RFC 7636 appendix B)', () => {

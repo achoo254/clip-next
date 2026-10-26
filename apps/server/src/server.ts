@@ -20,7 +20,7 @@ if (!config.databaseUrl) {
     media,
     pollMs: 2_000,
     log: { info: (m) => console.log(`[worker] ${m}`), warn: (m) => console.warn(`[worker] ${m}`) },
-    render: (input) => renderVideo(input, { chromePath: config.chromePath, timeoutMs: RENDER_TIMEOUT_MS }),
+    render: (input, signal) => renderVideo(input, { chromePath: config.chromePath, timeoutMs: RENDER_TIMEOUT_MS, signal }),
   });
   console.log('render worker running in-process (no DATABASE_URL)');
 }

@@ -20,10 +20,39 @@ export interface LoginState {
 
 const b64url = (buf: Buffer): string => buf.toString('base64url');
 
-/** A same-site path to return to: anything else (absolute URLs, `//host`, backslashes) becomes `/`. */
+const LOCAL = 'http://local';
+// Control characters and the backslash (browsers read `\` as `/` in URLs).
+// eslint-disable-next-line no-control-regex -- matching control characters is the point
+const UNSAFE = /[\u0000-\u001f\u007f\\]/;
+
+/** A path that can only stay on this site: one leading `/`, not followed by `/` or `\`. */
+export function isLocalPath(path: string): boolean {
+  return path.startsWith('/') && !path.startsWith('//') && !UNSAFE.test(path);
+}
+
+/**
+ * A same-site path to return to. The value is normalised the way the browser will read it (dot segments and
+ * `%2e` resolved) before it is checked, so `/.//evil.com` cannot turn into `//evil.com`. Anything else — absolute or
+ * protocol-relative URLs, backslashes, control characters — becomes `/`. The fragment is dropped.
+ */
 export function safeReturnPath(value: unknown): string {
-  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.includes('\\') || value.length > 200) return '/';
-  return value;
+  if (typeof value !== 'string' || value.length > 200 || !isLocalPath(value)) return '/';
+  let url: URL;
+  try {
+    url = new URL(value, LOCAL);
+  } catch {
+    return '/';
+  }
+  const path = `${url.pathname}${url.search}`;
+  return url.origin === LOCAL && isLocalPath(path) ? path : '/';
+}
+
+/** `path` (made safe first) with `login=<result>` in its query. */
+export function withLoginResult(path: string, result: string): string {
+  const url = new URL(safeReturnPath(path), LOCAL);
+  url.searchParams.set('login', result);
+  const out = `${url.pathname}${url.search}`;
+  return isLocalPath(out) ? out : `/?login=${encodeURIComponent(result)}`;
 }
 
 export function newLoginState(returnTo: string, lang: 'vi' | 'en', now = Date.now()): LoginState {

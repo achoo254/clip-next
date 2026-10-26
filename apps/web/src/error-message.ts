@@ -15,6 +15,8 @@ const KNOWN: ReadonlySet<string> = new Set([
   'photo-type',
   'photo-unreadable',
   'photo-too-big',
+  'server-busy',
+  'too-many-requests',
 ]);
 
 /** What to tell the person about a failed API call: the server's code in words, with its numbers filled in. */

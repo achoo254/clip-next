@@ -10,9 +10,9 @@ không ghi IP, cổng SSH hay user máy chủ vào đây; dùng placeholder `<SE
 | Bản phát hành | `/var/www/clip/app` (bản trước: `app.prev`), cài bằng `infra/deploy.sh release` |
 | Web tĩnh | `/var/www/clip/app/apps/web/dist`, nginx phục vụ trực tiếp |
 | Server API | systemd `clip-server`, Node 22 ở `/opt/node22`, loopback `127.0.0.1:4840` |
-| Worker render | systemd `clip-worker`: `MemoryMax=1500M`, `CPUQuota=150%`, `Nice=15`, mỗi lần một job |
+| Worker render | systemd `clip-worker`: `MemoryMax=1500M`, `CPUQuota=150%`, `Nice=15`, mỗi lần một job; chỉ được nối loopback (`IPAddressDeny=any`, `IPAddressAllow=localhost`), `NoNewPrivileges`, `PrivateTmp` |
 | Media | `/var/www/clip/media/{videos,inputs,tmp}` (user `clip`, nhóm `clip`; nginx thuộc nhóm `clip` để đọc video) |
-| Xoá file | `clip-media-cleanup.timer` mỗi giờ: video quá 7 ngày, phần thừa của upload/render |
+| Lưu giữ | `clip-media-cleanup.timer` mỗi giờ chạy `apps/worker/dist/cleanup.mjs`: xoá job (cả chữ người dùng) đúng ngày hết hạn cùng video và ảnh của nó, phiên hết hạn hoặc 7 ngày không dùng, video không còn job; rồi dọn phần thừa của upload/render |
 | Database | Postgres đang chạy trên `.65`, database `clip`, role `clip` (không dựng instance mới) |
 | Env | `/etc/clip/production.env` (640 `root:clip`), nguồn ở thư mục env iCloud `ENV production/clip/` |
 | nginx | `/etc/nginx/conf.d/clip.hoandat.com.conf` (từ `infra/nginx/`), `deploy.sh release` cài khi đổi, `nginx -t` trước khi reload |
@@ -56,9 +56,19 @@ CHROME_PATH=/usr/bin/google-chrome
 `infra/deploy.sh release`: chạy `lint`, `typecheck`, `test`, `build` ở máy dev, gửi bản build (giữ bố cục
 workspace vì bundle tìm migration và mẫu qua package, worker chạy CLI `hyperframes` từ `node_modules`), trên máy
 chủ `pnpm install --prod` cho `@clip/server` và `@clip/worker`, đổi `app/`, cài unit/nginx đã đổi, restart
-`clip-server` (đợi `/healthz`) rồi `clip-worker` (worker làm xong job đang cầm rồi mới dừng, tối đa 10 phút).
+`clip-server` và đợi `/healthz`. Nếu `/healthz` không lên trong 20 giây, script tự đổi về `app.prev`, restart
+`clip-server` rồi thoát mã khác 0 (bản lỗi để lại ở `app.failed`; worker chưa bị restart nên vẫn chạy bản cũ).
+Khi server đã khoẻ mới restart `clip-worker`.
 
-**Quay lại bản trước:** `cd /var/www/clip && rm -rf app && mv app.prev app && systemctl restart clip-server clip-worker`.
+**Dừng worker giữa chừng** (release, restart): `KillMode=mixed` gửi SIGTERM cho riêng tiến trình worker. Worker
+huỷ lần render đang chạy (công cụ nhận SIGTERM, 10 giây sau là SIGKILL), **đưa job về hàng đợi** kèm ảnh, rồi thoát;
+mọi thứ còn lại trong cgroup nhận SIGKILL (`TimeoutStopSec=60`). Worker mới render lại job đó từ đầu, nên người dùng
+không bị mất video vì một lần deploy.
+
+**Render quá 9 phút:** worker giết cả nhóm tiến trình của hyperframes, đánh job `failed/timeout`, rồi tự thoát mã 1
+để systemd dọn sạch cgroup (kể cả Chrome mà hyperframes chạy trong nhóm tiến trình riêng) và khởi động worker mới.
+
+**Quay lại bản trước bằng tay:** `cd /var/www/clip && rm -rf app && mv app.prev app && systemctl restart clip-server clip-worker`.
 
 ## Kiểm sau phát hành
 
@@ -74,6 +84,14 @@ chủ `pnpm install --prod` cho `@clip/server` và `@clip/worker`, đổi `app/`
 
 - **Job kẹt:** worker đánh `failed` (`stuck`) mọi job `rendering` quá 10 phút; một render bị giết sau 9 phút
   (`timeout`). Job lỗi không tính vào 5 video/ngày.
+- **Bảo vệ máy dùng chung:**
+  - mỗi tài khoản 10 yêu cầu render mỗi 10 phút (429 `too-many-requests`), và mỗi tài khoản chỉ một yêu cầu được xử lý tại một thời điểm;
+  - quá 20 job đang chờ, hoặc ổ của `MEDIA_DIR` còn dưới 2 GB, thì job mới nhận 503 `server-busy`;
+  - ảnh trên 24 MP bị từ chối trước khi giải mã; toàn server chỉ giải mã 2 ảnh cùng lúc, mỗi ffmpeg một luồng;
+  - đăng nhập giới hạn 100 lượt mỗi 15 phút mỗi IP (`/auth/login`, `/auth/callback`).
+- **Mạng của worker:** file server của hyperframes nghe trên mọi interface và không có tuỳ chọn đổi, mà firewall
+  của `.65` không chặn cổng cao. `IPAddressDeny=any` của unit là thứ giữ nó chỉ trong loopback; đừng bỏ dòng đó.
+  hyperframes, Chrome và ffmpeg chỉ nhận một env tối thiểu (không có `DATABASE_URL`, `AUTH_CLIENT_SECRET`).
 - **Tốc độ:** đo ở `.65` khoảng 5,8 giây render cho 1 giây video với composition trống; mẫu thật (ảnh, chữ) chậm
   hơn — trên Mac M4 các mẫu thật mất 5,7–7,1 giây/giây video. Mẫu dài nhất (18 giây) có thể gần 3 phút trên `.65`.
 - **Nâng hyperframes:** đổi phiên bản ở `apps/worker/package.json` và `apps/web/package.json` (player, core) cùng

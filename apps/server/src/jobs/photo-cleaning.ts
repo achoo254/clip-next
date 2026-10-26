@@ -22,9 +22,38 @@ export function sniffPhotoType(bytes: Uint8Array): PhotoType | null {
 
 /** Longest side of a stored photo, in pixels. */
 export const MAX_PHOTO_SIDE = 1080;
-/** Larger images are refused before decoding (a small file can declare a huge picture). */
-const MAX_PIXELS = 50_000_000;
+/**
+ * Larger pictures are refused before decoding: a small file can declare a huge picture, and ffmpeg decodes it whole
+ * (24 MP is about 100 MB of RGBA) inside the server's memory limit. Phone photos (6000×4000) fit.
+ */
+export const MAX_PIXELS = 24_000_000;
 const PHOTO_TIMEOUT_MS = 30_000;
+/** Photos decoded at once in the whole server: each decode can take a few hundred MB. */
+const MAX_CONCURRENT_PHOTOS = 2;
+
+/** ffmpeg's demuxer for each accepted type: the input is never probed as anything else. */
+const DEMUXER: Readonly<Record<PhotoType, string>> = { jpeg: 'jpeg_pipe', png: 'png_pipe', webp: 'webp_pipe' };
+
+/** A counting semaphore: at most `limit` holders, the rest wait in order. */
+export class Semaphore {
+  private active = 0;
+  private readonly waiting: (() => void)[] = [];
+
+  constructor(private readonly limit: number) {}
+
+  async run<T>(task: () => Promise<T>): Promise<T> {
+    if (this.active >= this.limit) await new Promise<void>((resolve) => this.waiting.push(resolve));
+    this.active += 1;
+    try {
+      return await task();
+    } finally {
+      this.active -= 1;
+      this.waiting.shift()?.();
+    }
+  }
+}
+
+const photoSlots = new Semaphore(MAX_CONCURRENT_PHOTOS);
 
 export class PhotoError extends Error {
   constructor(readonly code: 'photo-unreadable' | 'photo-too-big') {
@@ -57,8 +86,22 @@ function runTool(command: string, args: readonly string[]): Promise<string> {
   });
 }
 
-async function pictureSize(file: string): Promise<{ width: number; height: number }> {
-  const out = await runTool('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0:s=x', file]);
+async function pictureSize(file: string, type: PhotoType): Promise<{ width: number; height: number }> {
+  const out = await runTool('ffprobe', [
+    '-v',
+    'error',
+    '-protocol_whitelist',
+    'file',
+    '-f',
+    DEMUXER[type],
+    '-select_streams',
+    'v:0',
+    '-show_entries',
+    'stream=width,height',
+    '-of',
+    'csv=p=0:s=x',
+    file,
+  ]);
   const match = /^(\d+)x(\d+)/.exec(out.trim());
   if (!match) throw new PhotoError('photo-unreadable');
   return { width: Number(match[1]), height: Number(match[2]) };
@@ -66,15 +109,21 @@ async function pictureSize(file: string): Promise<{ width: number; height: numbe
 
 /**
  * Writes the cleaned JPEG of `bytes` to `output`. The upload goes to a temporary file in `tmpDir` (deleted
- * afterwards) because ffmpeg needs to seek in some formats.
+ * afterwards) because ffmpeg needs to seek in some formats. At most MAX_CONCURRENT_PHOTOS run at once in the
+ * process, each ffmpeg on one thread.
  */
-export async function cleanPhoto(bytes: Uint8Array, tmpDir: string, output: string): Promise<void> {
-  if (!sniffPhotoType(bytes)) throw new PhotoError('photo-unreadable');
+export function cleanPhoto(bytes: Uint8Array, tmpDir: string, output: string): Promise<void> {
+  const type = sniffPhotoType(bytes);
+  if (!type) return Promise.reject(new PhotoError('photo-unreadable'));
+  return photoSlots.run(() => cleanTyped(bytes, type, tmpDir, output));
+}
+
+async function cleanTyped(bytes: Uint8Array, type: PhotoType, tmpDir: string, output: string): Promise<void> {
   await mkdir(tmpDir, { recursive: true });
   const upload = path.join(tmpDir, `upload-${randomUUID()}`);
   await writeFile(upload, bytes);
   try {
-    const size = await pictureSize(upload).catch((error: unknown) => {
+    const size = await pictureSize(upload, type).catch((error: unknown) => {
       throw error instanceof PhotoError ? error : new PhotoError('photo-unreadable');
     });
     if (size.width * size.height > MAX_PIXELS) throw new PhotoError('photo-too-big');
@@ -83,6 +132,14 @@ export async function cleanPhoto(bytes: Uint8Array, tmpDir: string, output: stri
       '-v',
       'error',
       '-y',
+      '-filter_threads',
+      '1',
+      '-threads',
+      '1',
+      '-protocol_whitelist',
+      'file',
+      '-f',
+      DEMUXER[type],
       '-i',
       upload,
       '-frames:v',

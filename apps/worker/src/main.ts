@@ -17,13 +17,20 @@ const worker = startWorker({
   media,
   pollMs: config.pollMs,
   log,
-  render: (input) => renderVideo(input, { chromePath: config.chromePath, timeoutMs: RENDER_TIMEOUT_MS }),
+  render: (input, signal) => renderVideo(input, { chromePath: config.chromePath, timeoutMs: RENDER_TIMEOUT_MS, signal }),
+  // A render that timed out may have left Chrome behind (it runs in a process group of its own): exit, and systemd
+  // (KillMode=mixed, Restart=on-failure) kills whatever is left in the cgroup and starts a clean worker.
+  onTimeout: () => {
+    console.warn('render timed out: exiting so systemd clears the cgroup');
+    void database.close().finally(() => process.exit(1));
+  },
 });
 console.log(`clip worker polling every ${config.pollMs} ms; chrome: ${config.chromePath ?? 'hyperframes default'}`);
 
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
-  // systemd waits TimeoutStopSec for the job in hand; a job cut short is failed later as stuck.
-  console.log(`${signal}: finishing the current job`);
+  // The job in hand is aborted (its tools get SIGTERM, then SIGKILL after a grace period) and put back in the queue;
+  // the next worker renders it again from the start. systemd waits TimeoutStopSec for this.
+  console.log(`${signal}: putting the current job back in the queue`);
   await worker.stop();
   await database.close();
   process.exit(0);

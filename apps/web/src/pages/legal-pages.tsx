@@ -23,17 +23,18 @@ export function PrivacyPage(): ReactNode {
           <h2>Tài khoản</h2>
           <p>
             Bạn đăng nhập bằng tài khoản {account}. {name} chỉ nhận một mã định danh tài khoản (không nhận email, tên hay ảnh đại diện) và
-            một cookie phiên đăng nhập. Cookie này chỉ dùng để giữ bạn đăng nhập, hết hạn sau 30 ngày.
+            một cookie phiên đăng nhập. Cookie này chỉ dùng để giữ bạn đăng nhập, hết hạn sau 30 ngày (hoặc sau 7 ngày không dùng); phiên
+            hết hạn bị xoá khỏi máy chủ.
           </p>
           <h2>Chữ và ảnh bạn gửi</h2>
           <p>
             Khi bạn bấm tạo video, chữ bạn gõ và ảnh bạn chọn được gửi lên máy chủ. Ảnh được thu nhỏ còn tối đa 1080 điểm ảnh và xoá toàn
             bộ thông tin đi kèm (EXIF, vị trí GPS, loại máy) trước khi lưu, và bị xoá ngay khi video tạo xong. Chữ được lưu cùng video để
-            bạn xem lại danh sách của mình.
+            bạn xem lại danh sách của mình, và bị xoá cùng video sau 7 ngày.
           </p>
           <p>Phần xem trước chạy hoàn toàn trên máy bạn: ảnh không rời khỏi máy cho tới khi bạn bấm tạo video.</p>
           <h2>Video</h2>
-          <p>Video chỉ bạn tải được (máy chủ kiểm tài khoản trước khi trả tệp) và tự xoá sau 7 ngày.</p>
+          <p>Video chỉ bạn tải được (máy chủ kiểm tài khoản trước khi trả tệp) và tự xoá sau 7 ngày, tính từ lúc bạn bấm tạo.</p>
           <h2>Không có</h2>
           <p>Không quảng cáo, không công cụ theo dõi, không bán hay chia sẻ dữ liệu cho bên thứ ba.</p>
         </>
@@ -43,17 +44,18 @@ export function PrivacyPage(): ReactNode {
           <h2>Account</h2>
           <p>
             You sign in with your {account} account. {name} receives only an account identifier (no email, name or picture) and sets
-            one session cookie, used only to keep you signed in; it expires after 30 days.
+            one session cookie, used only to keep you signed in; it expires after 30 days (or 7 days unused), and expired sessions are
+            deleted from the server.
           </p>
           <h2>Text and photos you send</h2>
           <p>
             When you press create, the text you typed and the photos you chose are sent to the server. Photos are scaled down to at
             most 1080 pixels and stripped of all metadata (EXIF, GPS location, camera details) before they are stored, and deleted as
-            soon as the video is made. The text is kept with the video so you can see your list.
+            soon as the video is made. The text is kept with the video so you can see your list, and deleted with it after 7 days.
           </p>
           <p>The preview runs entirely on your device: photos do not leave it until you press create.</p>
           <h2>Videos</h2>
-          <p>Only you can download your videos (the server checks your account first); they are deleted after 7 days.</p>
+          <p>Only you can download your videos (the server checks your account first); they are deleted 7 days after you press create.</p>
           <h2>None of this</h2>
           <p>No ads, no trackers, no selling or sharing of data with third parties.</p>
         </>

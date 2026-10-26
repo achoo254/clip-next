@@ -1,12 +1,10 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
-import { accounts, sessions, type Db } from '@clip/db';
+import { accounts, SESSION_ABSOLUTE_MS, SESSION_IDLE_MS, sessions, type Db } from '@clip/db';
 import { eq, sql } from 'drizzle-orm';
 import type { CookieOptions, Response } from 'express';
 import type { ServerConfig } from '../config';
 
-export const SESSION_ABSOLUTE_MS = 30 * 24 * 60 * 60 * 1000;
-export const SESSION_IDLE_MS = 7 * 24 * 60 * 60 * 1000;
 /** Refresh `last_seen_at` at most this often to avoid a write on every request. */
 const TOUCH_INTERVAL_MS = 60 * 1000;
 

@@ -78,13 +78,41 @@ describe('worker', () => {
     const ids = [await queue('trich-dan', { quote: 'a', author: '' }, 0), await queue('trich-dan', { quote: 'b', author: '' }, 0)];
     const seen: RenderInput[] = [];
     // A render that takes a moment, so both workers are inside one at the same time.
-    const slow: Renderer = async (input) => {
+    const slow: Renderer = async (input, signal) => {
       await new Promise((resolve) => setTimeout(resolve, 50));
-      return recordingRenderer(seen)(input);
+      return recordingRenderer(seen)(input, signal);
     };
     const outcomes = await Promise.all([1, 2].map(() => processNextJob({ db: handle.db, media, render: slow, log: quiet })));
     expect(outcomes).toEqual(['done', 'done']);
     expect(seen.map((s) => s.output).sort()).toEqual(ids.map((id) => media.video(id)).sort());
+  });
+
+  it('puts the job back in the queue, photos kept, when the worker stops mid-render', async () => {
+    const id = await queue('chuc-mung', { line1: 'a', line2: 'b', line3: 'c' }, 1);
+    const abort = new AbortController();
+    const stopping: Renderer = async () => {
+      abort.abort();
+      throw new RenderError('aborted', 'stopping');
+    };
+    expect(await processNextJob({ db: handle.db, media, render: stopping, log: quiet, signal: abort.signal })).toBe('requeued');
+    expect(await job(id)).toMatchObject({ status: 'queued', startedAt: null, error: null });
+    expect(await readFile(media.photo(id, 0), 'utf8')).toBe('photo 0');
+    // A stopping worker takes no new job.
+    expect(await processNextJob({ db: handle.db, media, render: stopping, log: quiet, signal: abort.signal })).toBe('idle');
+  });
+
+  it('fails a timed-out job and then calls onTimeout (the service exits there)', async () => {
+    const id = await queue('trich-dan', { quote: 'q', author: '' }, 0);
+    const calls: string[] = [];
+    const slow: Renderer = async () => {
+      throw new RenderError('timeout', 'killed');
+    };
+    const onTimeout = async (): Promise<void> => {
+      calls.push((await job(id))?.status ?? 'missing');
+    };
+    expect(await processNextJob({ db: handle.db, media, render: slow, log: quiet, onTimeout: () => void onTimeout() })).toBe('failed');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(calls).toEqual(['failed']);
   });
 
   it('fails a job stuck in rendering and drops the video its worker writes too late', async () => {
@@ -93,11 +121,11 @@ describe('worker', () => {
     let clock = start;
     const now = (): Date => clock;
     // The first worker claims the job, then hangs past the stuck limit while another worker's turn runs.
-    const hanging: Renderer = async (input) => {
+    const hanging: Renderer = async (input, signal) => {
       clock = new Date(start.getTime() + STUCK_AFTER_MS + 1_000);
       expect(await processNextJob({ db: handle.db, media, render: recordingRenderer([]), log: quiet, now })).toBe('idle');
       expect(await job(stuckId)).toMatchObject({ status: 'failed', error: 'stuck' });
-      return recordingRenderer([])(input);
+      return recordingRenderer([])(input, signal);
     };
     expect(await processNextJob({ db: handle.db, media, render: hanging, log: quiet, now })).toBe('failed');
     expect(await job(stuckId)).toMatchObject({ status: 'failed', error: 'stuck' });

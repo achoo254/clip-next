@@ -7,6 +7,7 @@ import path from 'node:path';
 import { mediaLayout, openPglite, type DbHandle, type MediaLayout } from '@clip/db';
 import request from 'supertest';
 import { createApp } from './app';
+import type { JobRouteOptions } from './jobs/job-routes';
 import { accountForSub, createSession, sessionCookieName } from './auth/session';
 import { loadConfig, type ServerConfig } from './config';
 
@@ -23,12 +24,12 @@ export interface TestApp {
   close(): Promise<void>;
 }
 
-export async function startTestApp(overrides: Partial<ServerConfig> = {}): Promise<TestApp> {
+export async function startTestApp(overrides: Partial<ServerConfig> = {}, jobs?: JobRouteOptions): Promise<TestApp> {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'clip-test-'));
   const config: ServerConfig = { ...loadConfig({ NODE_ENV: 'test', MEDIA_DIR: dir }), ...overrides };
   const handle = await openPglite();
   const media = mediaLayout(dir);
-  const server = createApp({ config, db: handle.db, media }).listen(0, '127.0.0.1');
+  const server = createApp({ config, db: handle.db, media, jobs }).listen(0, '127.0.0.1');
   await new Promise<void>((resolve) => server.once('listening', resolve));
   const { port } = server.address() as AddressInfo;
   return {

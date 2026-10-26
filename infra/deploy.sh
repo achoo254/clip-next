@@ -10,7 +10,8 @@
 #          docs/deployment-guide.md). The database and the nginx site are separate steps of that guide.
 # release  gates and build here, upload, `pnpm install --prod` for the server and worker on the server, switch
 #          app/ (the previous one kept as app.prev), install changed units and the nginx site (nginx -t first),
-#          restart clip-server then clip-worker, check /healthz.
+#          restart clip-server and check /healthz (on failure switch back to app.prev, restart, exit 1), then
+#          restart clip-worker.
 #
 # Rollback: ssh in, `cd /var/www/clip && rm -rf app && mv app.prev app && systemctl restart clip-server clip-worker`.
 # The database only ever gains migrations that keep the previous release working.
@@ -90,14 +91,28 @@ release() {
 			echo 'nginx config installed and reloaded'
 		fi
 
+		healthy() {
+			for i in \$(seq 1 20); do
+				curl -fsS http://127.0.0.1:$PORT/healthz >/dev/null && return 0
+				sleep 1
+			done
+			return 1
+		}
 		systemctl enable clip-server clip-worker >/dev/null
 		systemctl restart clip-server
-		for i in \$(seq 1 20); do
-			if curl -fsS http://127.0.0.1:$PORT/healthz >/dev/null; then echo healthz ok; break; fi
-			[ \$i = 20 ] && { journalctl -u clip-server -n 40 --no-pager; exit 1; }
-			sleep 1
-		done
-		# The worker finishes the job in hand before it restarts (TimeoutStopSec).
+		if ! healthy; then
+			journalctl -u clip-server -n 40 --no-pager
+			if [ -d app.prev ]; then
+				echo 'healthz failed: switching back to the previous release' >&2
+				rm -rf app.failed && mv app app.failed && mv app.prev app
+				systemctl restart clip-server
+				healthy && echo 'previous release is back and healthy' >&2 || echo 'previous release is not healthy either' >&2
+			fi
+			# The worker was not restarted: it still runs the previous code.
+			exit 1
+		fi
+		echo healthz ok
+		# The worker puts the job in hand back in the queue and restarts (KillMode=mixed, TimeoutStopSec).
 		systemctl restart clip-worker
 		systemctl is-active clip-worker"
 }
