@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi" data-composition-variables='[
+  {"id":"title","type":"string","label":"Tiêu đề","default":"3 mẹo ngủ ngon"},
+  {"id":"point1","type":"string","label":"Ý 1","default":"Tắt màn hình trước khi ngủ 30 phút"},
+  {"id":"point2","type":"string","label":"Ý 2","default":"Giữ phòng mát và tối"},
+  {"id":"point3","type":"string","label":"Ý 3","default":"Đi ngủ cùng một giờ mỗi tối"},
+  {"id":"point4","type":"string","label":"Ý 4","default":""},
+  {"id":"point5","type":"string","label":"Ý 5","default":""},
+  {"id":"photo1","type":"string","label":"Ảnh 1","default":""},
+  {"id":"photo2","type":"string","label":"Ảnh 2","default":""},
+  {"id":"photo3","type":"string","label":"Ảnh 3","default":""}
+]'>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1080, height=1920" />
+<title>Kể nhanh</title>
+<style>
+  @font-face { font-family: "Be Vietnam Pro"; src: url("assets/fonts/BeVietnamPro-ExtraBold.ttf") format("truetype"); font-weight: 800; }
+  @font-face { font-family: "Be Vietnam Pro"; src: url("assets/fonts/BeVietnamPro-SemiBold.ttf") format("truetype"); font-weight: 600; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  #root {
+    position: relative; width: 1080px; height: 1920px; overflow: hidden;
+    background: #14122b; font-family: "Be Vietnam Pro", sans-serif; color: #ffffff;
+  }
+  #stage { position: absolute; inset: 0; }
+  #stripes {
+    position: absolute; inset: -400px; opacity: 0.5;
+    background: repeating-linear-gradient(135deg, #1f1b45 0 90px, #14122b 90px 180px);
+    animation: slide 18s linear 0s both;
+  }
+  .backdrop { position: absolute; inset: 0; opacity: 0; }
+  .backdrop img { width: 100%; height: 100%; object-fit: cover; display: block; animation: zoom 18s linear 0s both; }
+  .backdrop::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20, 18, 43, 0.55), rgba(20, 18, 43, 0.85)); }
+  #progress { position: absolute; left: 60px; right: 60px; top: 90px; height: 14px; border-radius: 7px; background: rgba(255, 255, 255, 0.18); overflow: hidden; }
+  #progress-fill { width: 100%; height: 100%; background: #ffd23f; transform-origin: left center; animation: grow 18s linear 0s both; }
+  #title-card { position: absolute; left: 80px; right: 80px; top: 640px; }
+  #kicker { display: inline-block; padding: 14px 30px; border-radius: 40px; background: #ffd23f; color: #14122b; font-weight: 800; font-size: 40px; }
+  #title { margin-top: 40px; font-weight: 800; line-height: 1.12; overflow-wrap: anywhere; }
+  .point { position: absolute; left: 80px; right: 80px; top: 560px; opacity: 0; }
+  .point .num { font-weight: 800; font-size: 220px; line-height: 1; color: #ffd23f; }
+  .point .of { font-weight: 600; font-size: 44px; color: rgba(255, 255, 255, 0.7); margin-left: 12px; }
+  .point p { margin-top: 30px; font-weight: 800; line-height: 1.16; overflow-wrap: anywhere; }
+  @keyframes slide { from { transform: translateX(0); } to { transform: translateX(254px); } }
+  @keyframes zoom { from { transform: scale(1); } to { transform: scale(1.15); } }
+  @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @keyframes card { 0% { opacity: 0; transform: translateY(80px); } 12% { opacity: 1; transform: none; } 88% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-60px); } }
+  @keyframes title-out { 0% { opacity: 1; transform: none; } 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-60px); } }
+  @keyframes fade { 0% { opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { opacity: 0; } }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="ke-nhanh" data-start="0" data-duration="18" data-width="1080" data-height="1920" data-no-timeline>
+  <div id="stage" class="clip" data-start="0" data-duration="18" data-track-index="0">
+    <div id="stripes" data-layout-allow-overflow></div>
+    <div id="backdrops"></div>
+    <div id="progress"><div id="progress-fill"></div></div>
+    <section id="title-card"><span id="kicker">Kể nhanh</span><h1 id="title"></h1></section>
+    <div id="points"></div>
+  </div>
+  <audio id="music" data-start="0" data-duration="18" data-volume="0.6" data-fade-in="0.3" data-fade-out="1.5" src="assets/music/bicycle.m4a"></audio>
+</div>
+<script src="scripts/common.js"></script>
+<script src="scripts/ke-nhanh.js"></script>
+</body>
+</html>

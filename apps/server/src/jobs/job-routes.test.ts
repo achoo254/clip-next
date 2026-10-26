@@ -1,0 +1,194 @@
+import { spawnSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { claimNextJob, createJob, DAILY_RENDER_LIMIT, markJobDone, renderJobs, type Db } from '@clip/db';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { ORIGIN, startTestApp, type TestApp } from '../test-support';
+
+/** A real JPEG of `width`×`height` from ffmpeg, with an EXIF block (camera make "SECRETCAM") spliced in. */
+function jpegWithExif(width: number, height: number): Buffer {
+  const out = spawnSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', `testsrc2=s=${width}x${height}`, '-frames:v', '1', '-f', 'mjpeg', 'pipe:1'], {
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (out.status !== 0) throw new Error(`ffmpeg: ${out.stderr.toString()}`);
+  const jpeg = out.stdout;
+  // TIFF (little endian) with one IFD entry: Make (0x010f), ASCII, "SECRETCAM\0" stored after the IFD.
+  const make = Buffer.from('SECRETCAM\0', 'latin1');
+  const tiff = Buffer.alloc(8 + 2 + 12 + 4);
+  tiff.write('II', 0, 'latin1');
+  tiff.writeUInt16LE(42, 2);
+  tiff.writeUInt32LE(8, 4);
+  tiff.writeUInt16LE(1, 8);
+  tiff.writeUInt16LE(0x010f, 10);
+  tiff.writeUInt16LE(2, 12);
+  tiff.writeUInt32LE(make.length, 14);
+  tiff.writeUInt32LE(tiff.length, 18);
+  tiff.writeUInt32LE(0, 22);
+  const payload = Buffer.concat([Buffer.from('Exif\0\0', 'latin1'), tiff, make]);
+  const app1 = Buffer.alloc(4);
+  app1.writeUInt16BE(0xffe1, 0);
+  app1.writeUInt16BE(payload.length + 2, 2);
+  return Buffer.concat([jpeg.subarray(0, 2), app1, payload, jpeg.subarray(2)]);
+}
+
+const QUOTE = { quote: 'Học, học nữa, học mãi', author: 'Lênin' };
+const WISHES = { line1: 'Chúc mừng sinh nhật', line2: 'Tuổi mới vui', line3: 'Yêu thương' };
+
+async function doneJobs(db: Db, accountId: string, count: number): Promise<string[]> {
+  const ids: string[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const now = new Date();
+    const created = await createJob(db, { id: randomUUID(), accountId, templateId: 'trich-dan', fields: QUOTE, photoCount: 0 }, now);
+    if (!created.ok) throw new Error('refused');
+    await claimNextJob(db, now);
+    await markJobDone(db, created.job.id, { outputBytes: 3, durationSeconds: 10, renderMs: 1 }, now);
+    ids.push(created.job.id);
+  }
+  return ids;
+}
+
+let app: TestApp;
+beforeEach(async () => {
+  app = await startTestApp();
+});
+afterEach(async () => {
+  await app.close();
+});
+
+describe('server basics', () => {
+  it('answers /healthz', async () => {
+    const res = await app.http().get('/healthz');
+    expect(res.status).toBe(200);
+    expect(res.text).toBe('ok');
+  });
+
+  it('says whether the browser is signed in', async () => {
+    expect((await app.http().get('/api/me')).body).toEqual({ signedIn: false, signInAvailable: false });
+    const { cookie } = await app.signIn('sub-1');
+    expect((await app.http().get('/api/me').set('Cookie', cookie)).body).toEqual({ signedIn: true, signInAvailable: false });
+  });
+
+  it('sends sign-in back with login=unavailable when no client secret is set', async () => {
+    const res = await app.http().get('/auth/login?return=/tao');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/tao?login=unavailable');
+  });
+});
+
+describe('POST /api/jobs', () => {
+  it('needs a session and an allowed Origin', async () => {
+    expect((await app.http().post('/api/jobs').set('Origin', ORIGIN).field('templateId', 'trich-dan')).status).toBe(401);
+    const { cookie } = await app.signIn('sub-1');
+    const res = await app.http().post('/api/jobs').set('Cookie', cookie).set('Origin', 'https://evil.example').field('templateId', 'trich-dan');
+    expect(res.status).toBe(403);
+  });
+
+  it('queues a job with cleaned photos: at most 1080 px, no EXIF left', async () => {
+    const { cookie } = await app.signIn('sub-1');
+    const res = await app
+      .http()
+      .post('/api/jobs')
+      .set('Cookie', cookie)
+      .set('Origin', ORIGIN)
+      .field('templateId', 'chuc-mung')
+      .field('fields', JSON.stringify(WISHES))
+      .attach('photos', jpegWithExif(2400, 1600), { filename: 'a.jpg', contentType: 'image/jpeg' });
+    expect(res.status).toBe(201);
+    expect(res.body.job).toMatchObject({ templateId: 'chuc-mung', status: 'queued', expired: false });
+    const stored = app.media.photo(res.body.job.id as string, 0);
+    const bytes = await readFile(stored);
+    expect(bytes.includes(Buffer.from('SECRETCAM'))).toBe(false);
+    expect(bytes.includes(Buffer.from('Exif'))).toBe(false);
+    const size = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', stored], { encoding: 'utf8' }).stdout.trim();
+    expect(size).toBe('1080,720');
+    // Nothing of the upload is left behind in tmp/.
+    expect(await readdir(app.media.tmp)).toEqual([]);
+  });
+
+  it('refuses files that are not JPEG, PNG or WebP by their bytes, whatever their name says', async () => {
+    const { cookie } = await app.signIn('sub-1');
+    const res = await app
+      .http()
+      .post('/api/jobs')
+      .set('Cookie', cookie)
+      .set('Origin', ORIGIN)
+      .field('templateId', 'chuc-mung')
+      .field('fields', JSON.stringify(WISHES))
+      .attach('photos', Buffer.from('GIF89a not really a photo'), { filename: 'a.jpg', contentType: 'image/jpeg' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('photo-type');
+  });
+
+  it('refuses more than three photos and invalid fields', async () => {
+    const { cookie } = await app.signIn('sub-1');
+    const photo = jpegWithExif(64, 64);
+    let req = app.http().post('/api/jobs').set('Cookie', cookie).set('Origin', ORIGIN).field('templateId', 'chuc-mung').field('fields', JSON.stringify(WISHES));
+    for (let i = 0; i < 4; i += 1) req = req.attach('photos', photo, { filename: `${i}.jpg`, contentType: 'image/jpeg' });
+    expect((await req).body.error).toBe('too-many-photos');
+    const missing = await app
+      .http()
+      .post('/api/jobs')
+      .set('Cookie', cookie)
+      .set('Origin', ORIGIN)
+      .field('templateId', 'trich-dan')
+      .field('fields', JSON.stringify({ quote: '' }));
+    expect(missing.status).toBe(400);
+    expect(missing.body).toEqual({ error: 'missing-field', field: 'quote' });
+  });
+
+  it('allows one waiting job per account (429 job-in-progress)', async () => {
+    const { cookie } = await app.signIn('sub-1');
+    const post = () =>
+      app.http().post('/api/jobs').set('Cookie', cookie).set('Origin', ORIGIN).field('templateId', 'trich-dan').field('fields', JSON.stringify(QUOTE));
+    expect((await post()).status).toBe(201);
+    const second = await post();
+    expect(second.status).toBe(429);
+    expect(second.body).toEqual({ error: 'job-in-progress' });
+  });
+
+  it('refuses the sixth render of the Vietnamese day with 429 daily-limit and when it resets', async () => {
+    const { accountId, cookie } = await app.signIn('sub-1');
+    await doneJobs(app.handle.db, accountId, DAILY_RENDER_LIMIT);
+    const res = await app.http().post('/api/jobs').set('Cookie', cookie).set('Origin', ORIGIN).field('templateId', 'trich-dan').field('fields', JSON.stringify(QUOTE));
+    expect(res.status).toBe(429);
+    expect(res.body.error).toBe('daily-limit');
+    expect(res.body.limit).toBe(DAILY_RENDER_LIMIT);
+    // Next 00:00 in Vietnam is 17:00 UTC.
+    expect(res.body.resetAt).toMatch(/T17:00:00\.000Z$/);
+    expect(await app.handle.db.select().from(renderJobs)).toHaveLength(DAILY_RENDER_LIMIT);
+    const list = await app.http().get('/api/jobs').set('Cookie', cookie);
+    expect(list.body.limits).toMatchObject({ perDay: DAILY_RENDER_LIMIT, usedToday: DAILY_RENDER_LIMIT });
+  });
+});
+
+describe('videos', () => {
+  it('lets only the owner download, from Node in dev', async () => {
+    const owner = await app.signIn('owner');
+    const other = await app.signIn('other');
+    const [id] = await doneJobs(app.handle.db, owner.accountId, 1);
+    if (!id) throw new Error('no job');
+    await mkdir(app.media.videos, { recursive: true });
+    await writeFile(app.media.video(id), 'mp4');
+    const res = await app.http().get(`/api/jobs/${id}/download`).set('Cookie', owner.cookie);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-disposition']).toMatch(/^attachment; filename="clip-\d{4}-\d{2}-\d{2}-[0-9a-f]{8}\.mp4"$/);
+    expect((await app.http().get(`/api/jobs/${id}/download`).set('Cookie', other.cookie)).status).toBe(404);
+    expect((await app.http().get(`/api/jobs/${id}`).set('Cookie', other.cookie)).status).toBe(404);
+    expect((await app.http().get('/api/jobs/not-a-uuid/video').set('Cookie', owner.cookie)).status).toBe(404);
+  });
+});
+
+describe('videos behind nginx', () => {
+  it('hands the file to nginx with X-Accel-Redirect after the ownership check', async () => {
+    await app.close();
+    app = await startTestApp({ videoDelivery: 'accel' });
+    const owner = await app.signIn('owner');
+    const [id] = await doneJobs(app.handle.db, owner.accountId, 1);
+    const res = await app.http().get(`/api/jobs/${id}/video`).set('Cookie', owner.cookie);
+    expect(res.status).toBe(200);
+    expect(res.headers['x-accel-redirect']).toBe(`/_clip_media/videos/${id}.mp4`);
+    expect(res.headers['content-disposition']).toMatch(/^inline; /);
+    // No bytes from Node: nginx sends the file.
+    expect(res.headers['content-length'] ?? '0').toBe('0');
+  });
+});

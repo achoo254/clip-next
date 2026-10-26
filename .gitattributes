@@ -1,0 +1,6 @@
+# Fonts, music and generated icons are binary: never convert line endings.
+*.ttf binary
+*.woff2 binary
+*.m4a binary
+*.png binary
+*.ico binary

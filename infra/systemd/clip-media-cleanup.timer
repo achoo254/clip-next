@@ -1,0 +1,11 @@
+# /etc/systemd/system/clip-media-cleanup.timer — hourly, so no video outlives its 7 days by more than an hour.
+[Unit]
+Description=Hourly cleanup of expired Clip videos
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=5m
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,33 @@
+# /etc/systemd/system/clip-worker.service — renders queued videos one at a time (hyperframes: headless Chrome,
+# then ffmpeg). Measured on .65: about 5.8 s of render per second of video, at least 2.4 GB memory left.
+[Unit]
+Description=Clip render worker
+After=network-online.target postgresql.service clip-server.service
+Wants=network-online.target postgresql.service
+
+[Service]
+User=clip
+Group=clip
+# DATABASE_URL, MEDIA_DIR, CHROME_PATH (the shared env file; the worker ignores the server-only keys).
+EnvironmentFile=/etc/clip/production.env
+WorkingDirectory=/var/www/clip/app
+ExecStart=/opt/node22/bin/node --enable-source-maps apps/worker/dist/main.mjs
+Restart=on-failure
+RestartSec=5
+# The shared server keeps its other apps running: one Chrome, capped memory and CPU, low priority.
+MemoryMax=1500M
+CPUQuota=150%
+Nice=15
+# A render takes minutes; a stop waits for the job in hand (a job cut short is failed as stuck later).
+TimeoutStopSec=600
+# Chrome needs a writable home for its profile and caches.
+StateDirectory=clip-worker
+Environment=HOME=/var/lib/clip-worker
+UMask=0027
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/www/clip/media
+
+[Install]
+WantedBy=multi-user.target

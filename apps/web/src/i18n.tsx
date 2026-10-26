@@ -1,0 +1,213 @@
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import type { Locale } from '@clip/templates';
+
+/** Every UI string, Vietnamese first (the default), English second. `{name}` placeholders are filled by `t`. */
+const vi = {
+  'nav.create': 'Tạo video',
+  'nav.videos': 'Video của tôi',
+  'nav.main': 'Điều hướng chính',
+  'auth.signIn': 'Đăng nhập',
+  'auth.signOut': 'Đăng xuất',
+  'auth.unavailable': 'Đăng nhập tạm thời chưa dùng được. Bạn vẫn xem trước được mẫu.',
+  'auth.failed': 'Đăng nhập không thành công. Hãy thử lại.',
+  'lang.label': 'Ngôn ngữ',
+  'foot.ecosystem': 'Một app của {domain}',
+  'foot.privacy': 'Quyền riêng tư',
+  'foot.terms': 'Điều khoản',
+  'foot.credits': 'Ghi công',
+  'intro.title': 'Video dọc ngắn từ vài dòng chữ',
+  'intro.lead': 'Chọn mẫu, gõ vài dòng, thêm tối đa 3 ảnh. Xem trước ngay trên trình duyệt, bấm tạo là có MP4 1080×1920 để tải về hay chia sẻ.',
+  'intro.start': 'Thử ngay',
+  'intro.signIn': 'Đăng nhập để tạo video',
+  'intro.how': 'Cách dùng',
+  'intro.step1': 'Chọn một trong ba mẫu.',
+  'intro.step2': 'Gõ chữ, thêm ảnh, xem trước ngay.',
+  'intro.step3': 'Bấm tạo video; vài phút sau tải MP4 về.',
+  'intro.limits': 'Mỗi tài khoản tạo được {limit} video mỗi ngày, mỗi video dài tối đa {seconds} giây. Video tự xoá sau 7 ngày.',
+  'intro.templates': 'Các mẫu',
+  'create.title': 'Tạo video',
+  'create.template': 'Mẫu',
+  'create.seconds': '{seconds} giây',
+  'create.photos': 'Ảnh ({min}–{max})',
+  'create.photosNone': 'Mẫu này không dùng ảnh.',
+  'create.photosHint': 'JPEG, PNG hoặc WebP, mỗi ảnh tối đa 5 MB. Ảnh được thu nhỏ và xoá thông tin vị trí trước khi lưu.',
+  'create.addPhoto': 'Thêm ảnh',
+  'create.removePhoto': 'Bỏ ảnh {n}',
+  'create.optional': '(không bắt buộc)',
+  'create.preview': 'Xem trước',
+  'create.previewNote': 'Xem trước chạy ngay trên máy bạn; video thật được tạo trên máy chủ khi bạn bấm nút.',
+  'create.render': 'Tạo video',
+  'create.rendering': 'Đang gửi…',
+  'create.signInToRender': 'Đăng nhập để tạo video',
+  'create.queued': 'Đã nhận! Video đang được tạo, xem ở trang Video của tôi.',
+  'create.photoTooBig': 'Ảnh "{name}" lớn hơn 5 MB.',
+  'create.photoType': 'Ảnh "{name}" không phải JPEG, PNG hay WebP.',
+  'create.charsLeft': '{count}/{max}',
+  'error.daily-limit': 'Hôm nay bạn đã tạo đủ {limit} video. Mai (sau {time}) bạn tạo tiếp được nhé.',
+  'error.job-in-progress': 'Bạn đang có một video chờ tạo. Đợi video đó xong rồi tạo tiếp nhé.',
+  'error.sign-in-required': 'Bạn cần đăng nhập.',
+  'error.missing-field': 'Còn thiếu một dòng chữ bắt buộc.',
+  'error.field-too-long': 'Có dòng chữ dài quá.',
+  'error.too-few-photos': 'Mẫu này cần ít nhất {min} ảnh.',
+  'error.too-many-photos': 'Tối đa 3 ảnh.',
+  'error.photo-too-large': 'Mỗi ảnh tối đa 5 MB.',
+  'error.photo-type': 'Chỉ nhận ảnh JPEG, PNG hoặc WebP.',
+  'error.photo-unreadable': 'Không đọc được một ảnh. Hãy thử ảnh khác.',
+  'error.photo-too-big': 'Một ảnh có độ phân giải quá lớn.',
+  'error.generic': 'Có lỗi xảy ra. Hãy thử lại sau.',
+  'videos.title': 'Video của tôi',
+  'videos.empty': 'Chưa có video nào.',
+  'videos.usage': 'Hôm nay: {used}/{limit} video.',
+  'videos.signIn': 'Đăng nhập để xem video của bạn.',
+  'videos.created': 'Tạo lúc {time}',
+  'videos.expires': 'Tự xoá lúc {time}',
+  'videos.expired': 'Đã hết hạn và bị xoá',
+  'videos.download': 'Tải về',
+  'videos.share': 'Chia sẻ',
+  'videos.shareFallback': 'Trình duyệt này chưa chia sẻ được tệp; hãy tải về rồi chia sẻ.',
+  'status.queued': 'Đang chờ',
+  'status.rendering': 'Đang tạo',
+  'status.done': 'Xong',
+  'status.failed': 'Không tạo được',
+  'videos.failedNote': 'Lần này không tính vào giới hạn trong ngày. Bạn tạo lại được.',
+  'privacy.title': 'Quyền riêng tư',
+  'terms.title': 'Điều khoản',
+  'credits.title': 'Ghi công',
+  'notFound.title': 'Không tìm thấy trang',
+  'notFound.back': 'Về trang chủ',
+} as const;
+
+export type MessageKey = keyof typeof vi;
+
+const en: Record<MessageKey, string> = {
+  'nav.create': 'Create',
+  'nav.videos': 'My videos',
+  'nav.main': 'Main navigation',
+  'auth.signIn': 'Sign in',
+  'auth.signOut': 'Sign out',
+  'auth.unavailable': 'Sign-in is not available right now. You can still preview the templates.',
+  'auth.failed': 'Sign-in did not work. Please try again.',
+  'lang.label': 'Language',
+  'foot.ecosystem': 'An app by {domain}',
+  'foot.privacy': 'Privacy',
+  'foot.terms': 'Terms',
+  'foot.credits': 'Credits',
+  'intro.title': 'Short vertical videos from a few lines of text',
+  'intro.lead': 'Pick a template, type a few lines, add up to 3 photos. Preview it right in the browser, then get a 1080×1920 MP4 to download or share.',
+  'intro.start': 'Try it',
+  'intro.signIn': 'Sign in to make videos',
+  'intro.how': 'How it works',
+  'intro.step1': 'Pick one of three templates.',
+  'intro.step2': 'Type your text, add photos, preview at once.',
+  'intro.step3': 'Press create; a few minutes later download the MP4.',
+  'intro.limits': 'Each account can make {limit} videos a day, each up to {seconds} seconds. Videos are deleted after 7 days.',
+  'intro.templates': 'Templates',
+  'create.title': 'Create a video',
+  'create.template': 'Template',
+  'create.seconds': '{seconds} s',
+  'create.photos': 'Photos ({min}–{max})',
+  'create.photosNone': 'This template uses no photos.',
+  'create.photosHint': 'JPEG, PNG or WebP, up to 5 MB each. Photos are scaled down and location data removed before they are stored.',
+  'create.addPhoto': 'Add photo',
+  'create.removePhoto': 'Remove photo {n}',
+  'create.optional': '(optional)',
+  'create.preview': 'Preview',
+  'create.previewNote': 'The preview runs on your device; the real video is made on the server when you press the button.',
+  'create.render': 'Create video',
+  'create.rendering': 'Sending…',
+  'create.signInToRender': 'Sign in to create the video',
+  'create.queued': 'Got it! Your video is being made; find it under My videos.',
+  'create.photoTooBig': 'Photo "{name}" is larger than 5 MB.',
+  'create.photoType': 'Photo "{name}" is not a JPEG, PNG or WebP.',
+  'create.charsLeft': '{count}/{max}',
+  'error.daily-limit': 'You have made {limit} videos today. You can make more tomorrow (after {time}).',
+  'error.job-in-progress': 'You already have a video waiting to be made. Wait for it to finish first.',
+  'error.sign-in-required': 'Please sign in.',
+  'error.missing-field': 'A required line is empty.',
+  'error.field-too-long': 'A line is too long.',
+  'error.too-few-photos': 'This template needs at least {min} photo(s).',
+  'error.too-many-photos': 'Up to 3 photos.',
+  'error.photo-too-large': 'Each photo can be up to 5 MB.',
+  'error.photo-type': 'Only JPEG, PNG or WebP photos.',
+  'error.photo-unreadable': 'A photo could not be read. Try another one.',
+  'error.photo-too-big': 'A photo has too many pixels.',
+  'error.generic': 'Something went wrong. Please try again later.',
+  'videos.title': 'My videos',
+  'videos.empty': 'No videos yet.',
+  'videos.usage': 'Today: {used}/{limit} videos.',
+  'videos.signIn': 'Sign in to see your videos.',
+  'videos.created': 'Created {time}',
+  'videos.expires': 'Deleted at {time}',
+  'videos.expired': 'Expired and deleted',
+  'videos.download': 'Download',
+  'videos.share': 'Share',
+  'videos.shareFallback': 'This browser cannot share files; download the video and share it from there.',
+  'status.queued': 'Waiting',
+  'status.rendering': 'Rendering',
+  'status.done': 'Done',
+  'status.failed': 'Failed',
+  'videos.failedNote': 'This one does not count against your daily limit. You can try again.',
+  'privacy.title': 'Privacy',
+  'terms.title': 'Terms',
+  'credits.title': 'Credits',
+  'notFound.title': 'Page not found',
+  'notFound.back': 'Back home',
+};
+
+const DICTIONARIES: Readonly<Record<Locale, Readonly<Record<MessageKey, string>>>> = { vi, en };
+export const LOCALES: readonly Locale[] = ['vi', 'en'];
+export const LOCALE_NAMES: Readonly<Record<Locale, string>> = { vi: 'Tiếng Việt', en: 'English' };
+const STORAGE_KEY = 'clip.locale';
+
+export type Translate = (key: MessageKey, params?: Readonly<Record<string, string | number>>) => string;
+
+/** Fills `{name}` placeholders. */
+export function format(template: string, params: Readonly<Record<string, string | number>> = {}): string {
+  return template.replace(/\{(\w+)\}/g, (whole, name: string) => (name in params ? String(params[name]) : whole));
+}
+
+export function translator(locale: Locale): Translate {
+  return (key, params) => format(DICTIONARIES[locale][key], params);
+}
+
+/** `?lang=` first (links from other apps), then the saved choice, then Vietnamese. */
+function initialLocale(): Locale {
+  const fromUrl = new URLSearchParams(window.location.search).get('lang');
+  if (fromUrl === 'vi' || fromUrl === 'en') return fromUrl;
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (saved === 'vi' || saved === 'en') return saved;
+  } catch {
+    // Storage blocked (private mode): the default applies.
+  }
+  return 'vi';
+}
+
+interface I18n {
+  readonly locale: Locale;
+  readonly t: Translate;
+  setLocale(locale: Locale): void;
+}
+
+const I18nContext = createContext<I18n | null>(null);
+
+export function I18nProvider({ children }: { readonly children: ReactNode }): ReactNode {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale);
+  const setLocale = useCallback((next: Locale) => {
+    setLocaleState(next);
+    document.documentElement.lang = next;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // Not saved: the choice holds for this visit.
+    }
+  }, []);
+  const value = useMemo(() => ({ locale, t: translator(locale), setLocale }), [locale, setLocale]);
+  return <I18nContext value={value}>{children}</I18nContext>;
+}
+
+export function useI18n(): I18n {
+  const value = useContext(I18nContext);
+  if (!value) throw new Error('useI18n outside I18nProvider');
+  return value;
+}

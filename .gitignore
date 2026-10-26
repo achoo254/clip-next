@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.DS_Store
+
+# Dev database (PGlite) and media (uploads, renders) of a local run.
+.data/
+
+# Environment files hold secrets; production env lives on iCloud "ENV production/clip/".
+.env
+.env.*
+!.env.example
+
+.claude/
+test-results/
+playwright-report/

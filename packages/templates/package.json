@@ -1,0 +1,15 @@
+{
+  "name": "@clip/templates",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/catalog.ts",
+    "./project": "./src/project.ts",
+    "./project/*": "./project/*",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

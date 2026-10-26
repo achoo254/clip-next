@@ -1,0 +1,22 @@
+packages:
+  - apps/*
+  - packages/*
+
+# pnpm 11 runs no install script unless the package is listed here.
+allowBuilds:
+  esbuild: true
+
+# hyperframes is pinned to the release measured on the server (0.8.201, published 26/10/2026); pnpm 11 holds back
+# releases younger than a day, so the exact versions are let through. Drop these lines once they are older.
+minimumReleaseAgeExclude:
+  - hyperframes@0.8.201
+  - '@hyperframes/player@0.8.201'
+  - '@hyperframes/core@0.8.201'
+  - '@hyperframes/parsers@0.8.201'
+  - '@hyperframes/lint@0.8.201'
+  - '@hyperframes/studio-server@0.8.201'
+
+# body-parser below 2.4.0 has a denial-of-service advisory (GHSA-27r3-jxmh-p828); express 5 still allows
+# the older 2.x, so pin the fixed release until express requires it itself.
+overrides:
+  body-parser: ^2.4.0

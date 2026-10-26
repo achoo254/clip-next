@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/@achoo254/brand/brand.config.schema.json",
+  "appName": "Clip",
+  "shortName": "Clip",
+  "description": "Chọn mẫu, gõ vài dòng, thêm ảnh rồi nhận về một video dọc ngắn để tải xuống hoặc chia sẻ.",
+  "colors": {
+    "primary": "#6e56cf",
+    "background": "#f9f9fb",
+    "backgroundDark": "#111113"
+  },
+  "icon": "brand/icon.svg",
+  "iconMaskable": "brand/icon-maskable.svg",
+  "webInstall": true,
+  "appIds": {
+    "ios": "com.hoandat.clip"
+  },
+  "urlScheme": "com.hoandat.clip",
+  "primaryTenant": {
+    "domain": "hoandat.com",
+    "issuer": "https://auth.hoandat.com"
+  },
+  "hostTemplates": {
+    "web": "clip.{domain}"
+  }
+}

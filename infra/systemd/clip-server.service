@@ -1,0 +1,29 @@
+# /etc/systemd/system/clip-server.service — the Clip API (sign-in, uploads, job queue, video access checks).
+[Unit]
+Description=Clip API server
+After=network-online.target postgresql.service
+Wants=network-online.target postgresql.service
+
+[Service]
+User=clip
+Group=clip
+# NODE_ENV=production, PORT=4840, PUBLIC_URL, DATABASE_URL, MEDIA_DIR, AUTH_*: never in the repo
+# (docs/deployment-guide.md).
+EnvironmentFile=/etc/clip/production.env
+WorkingDirectory=/var/www/clip/app
+ExecStart=/opt/node22/bin/node --enable-source-maps apps/server/dist/server.mjs
+Restart=on-failure
+RestartSec=3
+# Uploaded photos are cleaned with ffmpeg here; keep the server modest on the shared box.
+MemoryMax=512M
+CPUQuota=100%
+# nginx (in group clip) reads the files; nobody else does.
+UMask=0027
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/www/clip/media
+
+[Install]
+WantedBy=multi-user.target
