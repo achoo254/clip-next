@@ -529,8 +529,18 @@ button {
   margin: 0;
   display: grid;
   gap: var(--space-2);
-  position: sticky;
-  top: calc(var(--topbar-h) + var(--space-4));
+}
+/* Desktop: the preview column stays in view while the template grid and the form scroll, and the 9:16 frame
+   shrinks to fit the viewport height (label above, note below) so the whole video and its controls are visible. */
+@media (min-width: 840px) {
+  .preview-column {
+    position: sticky;
+    top: calc(var(--topbar-h) + var(--space-4));
+  }
+  .preview-frame {
+    width: min(100%, calc((100svh - var(--topbar-h) - 2 * var(--space-4) - 7rem) * 9 / 16));
+    justify-self: center;
+  }
 }
 .preview-frame {
   aspect-ratio: 9 / 16;

@@ -195,7 +195,7 @@ export function CreatePage(): ReactNode {
           )}
         </form>
 
-        <section aria-label={t('create.preview')}>
+        <section className="preview-column" aria-label={t('create.preview')} data-id="preview-column">
           <h2 className="label">{t('create.preview')}</h2>
           <TemplatePreview templateId={templateId} fields={previewFields} photoUrls={photoUrls} />
         </section>
