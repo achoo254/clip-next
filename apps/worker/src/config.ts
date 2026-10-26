@@ -8,6 +8,12 @@ const Env = z.object({
   /** Chrome for the renders (on the server: /usr/bin/google-chrome). Unset: hyperframes finds or downloads one. */
   CHROME_PATH: z.preprocess(emptyIsUnset, z.string().min(1).optional()),
   POLL_MS: z.coerce.number().int().min(200).max(60_000).default(2_000),
+  /**
+   * An ffmpeg with libx264 (and its ffprobe) for hyperframes to write MP4 itself, five times faster than the WebM
+   * path (render.ts). Unset: the ones on PATH (the server's has no libx264, so WebM).
+   */
+  FFMPEG_PATH: z.preprocess(emptyIsUnset, z.string().min(1).optional()),
+  FFPROBE_PATH: z.preprocess(emptyIsUnset, z.string().min(1).optional()),
 });
 
 export interface WorkerConfig {
@@ -15,6 +21,8 @@ export interface WorkerConfig {
   readonly mediaDir: string;
   readonly chromePath: string | undefined;
   readonly pollMs: number;
+  readonly ffmpegPath: string | undefined;
+  readonly ffprobePath: string | undefined;
 }
 
 /** Validates the worker's env once at start; throws naming the offending keys. */
@@ -22,7 +30,14 @@ export function loadWorkerConfig(env: Record<string, string | undefined> = proce
   const parsed = Env.safeParse(env);
   if (!parsed.success) throw new Error(`Invalid worker env: ${parsed.error.issues.map((i) => i.path.join('.')).join(', ')}`);
   const e = parsed.data;
-  return { databaseUrl: e.DATABASE_URL, mediaDir: e.MEDIA_DIR, chromePath: e.CHROME_PATH, pollMs: e.POLL_MS };
+  return {
+    databaseUrl: e.DATABASE_URL,
+    mediaDir: e.MEDIA_DIR,
+    chromePath: e.CHROME_PATH,
+    pollMs: e.POLL_MS,
+    ffmpegPath: e.FFMPEG_PATH,
+    ffprobePath: e.FFPROBE_PATH,
+  };
 }
 
 /** Longest a render may take before it is killed: under the 10 minutes after which a job counts as stuck. */

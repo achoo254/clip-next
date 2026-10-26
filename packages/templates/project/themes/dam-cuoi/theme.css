@@ -1,0 +1,13 @@
+/* Wedding: ivory, white flowers and champagne gold; deep brown-gold text on a light veil. */
+:root {
+  --base: #f4ead9;
+  --ink: #4a3417;
+  --ink-soft: #6e5634;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #9a6b12;
+  --shade: rgba(244, 234, 217, 0.92);
+  --panel: rgba(244, 234, 217, 0.86);
+  --track: rgba(74, 52, 23, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 11.1% 11.1% 14.5% 11.2%;
+}

@@ -1,0 +1,13 @@
+/* Christmas: pine green, red and gold with warm lights; white text on a deep green veil. */
+:root {
+  --base: #1f3a2a;
+  --ink: #ffffff;
+  --ink-soft: rgba(255, 255, 255, 0.82);
+  --ink-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
+  --accent: #ffcf5a;
+  --shade: rgba(31, 58, 42, 0.82);
+  --panel: rgba(31, 58, 42, 0.78);
+  --track: rgba(255, 255, 255, 0.2);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 20.8% 20.7% 27% 22.3%;
+}

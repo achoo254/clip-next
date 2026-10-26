@@ -1,27 +1,36 @@
 /**
- * The compositions on disk (Node only). Each template is `project/<id>.html` plus `project/scripts/<id>.js`; they
- * share `project/scripts/common.js` and `project/assets/` (fonts, music). `prepareProject` lays one template out as
- * a stand-alone hyperframes project (its composition as index.html), which is what the worker renders and what
- * `pnpm check:templates` checks.
+ * The compositions on disk (Node only). A template is a layout — `project/layouts/<layout>.html` and
+ * `project/scripts/<layout>.js`, sharing `project/scripts/common.js` — dressed in a theme: `project/themes/<theme>/`
+ * (AI-drawn background, stickers, photo frame, `theme.css`), plus fonts and one music track from `project/assets/`.
+ * `prepareProject` lays one template out as a stand-alone hyperframes project (its composition as index.html): what
+ * the worker renders and what `pnpm check:templates` checks.
  */
-import { cp, mkdir } from 'node:fs/promises';
+import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import type { TemplateId } from './catalog';
+import { composeTemplateHtml, templateById, type TemplateId } from './catalog';
 
 /**
- * packages/templates/project: the compositions, their scripts and shared assets. Found through the package's own
- * name, so the path stays right when this file is bundled into the worker (it then resolves from the bundle's
- * node_modules).
+ * packages/templates/project: layouts, scripts, themes and shared assets. Found through the package's own name, so
+ * the path stays right when this file is bundled into the worker (it then resolves from the bundle's node_modules).
  */
 export const PROJECT_DIR = path.join(path.dirname(createRequire(import.meta.url).resolve('@clip/templates/package.json')), 'project');
 
 /** Writes the hyperframes project of `templateId` into `dir` (created if needed). */
 export async function prepareProject(templateId: TemplateId, dir: string): Promise<void> {
+  const spec = templateById(templateId);
+  const layoutHtml = await readFile(path.join(PROJECT_DIR, 'layouts', `${spec.layout}.html`), 'utf8');
   await mkdir(path.join(dir, 'scripts'), { recursive: true });
-  await cp(path.join(PROJECT_DIR, `${templateId}.html`), path.join(dir, 'index.html'));
-  for (const script of ['common.js', `${templateId}.js`]) {
+  await writeFile(path.join(dir, 'index.html'), composeTemplateHtml(layoutHtml, spec));
+  for (const script of ['common.js', `${spec.layout}.js`]) {
     await cp(path.join(PROJECT_DIR, 'scripts', script), path.join(dir, 'scripts', script));
   }
-  await cp(path.join(PROJECT_DIR, 'assets'), path.join(dir, 'assets'), { recursive: true });
+  // Only this template's theme and track: the render's file server has less to serve and nothing else to leak.
+  await cp(path.join(PROJECT_DIR, 'themes', spec.theme), path.join(dir, 'themes', spec.theme), {
+    recursive: true,
+    filter: (source) => path.basename(source) !== 'thumb.webp',
+  });
+  await cp(path.join(PROJECT_DIR, 'assets', 'fonts'), path.join(dir, 'assets', 'fonts'), { recursive: true });
+  await mkdir(path.join(dir, 'assets', 'music'), { recursive: true });
+  await cp(path.join(PROJECT_DIR, 'assets', 'music', `${spec.music}.m4a`), path.join(dir, 'assets', 'music', `${spec.music}.m4a`));
 }

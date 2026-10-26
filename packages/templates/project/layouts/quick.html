@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="vi" data-composition-variables='[
+  {"id":"title","type":"string","label":"Tiêu đề","default":"3 mẹo ngủ ngon"},
+  {"id":"point1","type":"string","label":"Ý 1","default":"Tắt màn hình trước khi ngủ 30 phút"},
+  {"id":"point2","type":"string","label":"Ý 2","default":"Giữ phòng mát và tối"},
+  {"id":"point3","type":"string","label":"Ý 3","default":"Đi ngủ cùng một giờ mỗi tối"},
+  {"id":"point4","type":"string","label":"Ý 4","default":""},
+  {"id":"point5","type":"string","label":"Ý 5","default":""},
+  {"id":"photo1","type":"string","label":"Ảnh 1","default":""},
+  {"id":"photo2","type":"string","label":"Ảnh 2","default":""},
+  {"id":"photo3","type":"string","label":"Ảnh 3","default":""}
+]'>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1080, height=1920" />
+<title>Quick list</title>
+<!-- The theme: colours (theme.css) and AI-drawn art (background, stickers). -->
+<link rel="stylesheet" href="themes/{{theme}}/theme.css" />
+<style>
+  @font-face { font-family: "Be Vietnam Pro"; src: url("assets/fonts/BeVietnamPro-ExtraBold.ttf") format("truetype"); font-weight: 800; }
+  @font-face { font-family: "Be Vietnam Pro"; src: url("assets/fonts/BeVietnamPro-SemiBold.ttf") format("truetype"); font-weight: 600; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--base); font-family: "Be Vietnam Pro", sans-serif; color: var(--ink); }
+  #stage { position: absolute; inset: 0; }
+  #bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 50%; animation: kenburns 18s linear 0s both; }
+  /* Progress through the points (what a short video shows at the top). */
+  #progress { position: absolute; left: 60px; right: 60px; top: 80px; height: 12px; border-radius: 6px; background: var(--track); overflow: hidden; }
+  #progress-fill { width: 100%; height: 100%; background: var(--accent); transform-origin: left center; animation: grow 18s linear 0s both; }
+  /* Text sits on a translucent panel (legibility only). */
+  .panel { position: absolute; left: 60px; right: 60px; padding: 56px 60px; border-radius: 44px; background: var(--panel); }
+  #title-card { top: 760px; }
+  #title { font-weight: 800; line-height: 1.12; overflow-wrap: anywhere; text-shadow: var(--ink-shadow); }
+  .point { opacity: 0; }
+  .point.text-only { top: 700px; }
+  .point.with-photo { top: 1120px; }
+  .point .num { font-weight: 800; font-size: 150px; line-height: 1; color: var(--accent); }
+  .point .of { font-weight: 600; font-size: 44px; color: var(--ink-soft); margin-left: 12px; }
+  .point p { margin-top: 20px; font-weight: 800; line-height: 1.16; overflow-wrap: anywhere; text-shadow: var(--ink-shadow); }
+  .shot { position: absolute; left: 90px; right: 90px; top: 210px; height: 860px; opacity: 0; border-radius: 40px; overflow: hidden; }
+  .shot img { width: 100%; height: 100%; object-fit: cover; display: block; animation: zoom 18s linear 0s both; }
+  .sticker { position: absolute; }
+  /* Each sticker sits in a box of its slot, whatever its shape. */
+  .sticker img { display: block; width: 100%; height: 100%; object-fit: contain; animation: float 3.4s ease-in-out 0s infinite alternate both; }
+  #sticker-1 { left: 390px; top: 430px; width: 300px; height: 300px; }
+  #sticker-2 { right: 20px; bottom: 40px; width: 230px; height: 230px; }
+  #sticker-3 { left: 20px; bottom: 50px; width: 210px; height: 210px; }
+  #sticker-3 img { animation-delay: -1.7s; }
+  @keyframes kenburns { from { transform: scale(1.02); } to { transform: scale(1.14) translateY(-40px); } }
+  @keyframes zoom { from { transform: scale(1); } to { transform: scale(1.12); } }
+  @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @keyframes float { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-20px) rotate(3deg); } }
+  @keyframes card { 0% { opacity: 0; transform: translateY(80px); } 12% { opacity: 1; transform: none; } 88% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-60px); } }
+  @keyframes fade { 0% { opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes title-out { 0% { opacity: 1; transform: none; } 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-60px); } }
+  @keyframes sticker-in { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes sticker-out { from { opacity: 1; } to { opacity: 0; } }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="quick" data-start="0" data-duration="18" data-width="1080" data-height="1920" data-no-timeline>
+  <div id="stage" class="clip" data-start="0" data-duration="18" data-track-index="0">
+    <img id="bg" src="themes/{{theme}}/bg.webp" alt="" data-layout-allow-overflow />
+    <div id="shots"></div>
+    <div id="progress"><div id="progress-fill"></div></div>
+    <section id="title-card" class="panel"><h1 id="title"></h1></section>
+    <div id="points"></div>
+    <div id="sticker-1" class="sticker"><img src="themes/{{theme}}/sticker-1.webp" alt="" /></div>
+    <div id="sticker-2" class="sticker"><img src="themes/{{theme}}/sticker-2.webp" alt="" /></div>
+    <div id="sticker-3" class="sticker"><img src="themes/{{theme}}/sticker-3.webp" alt="" /></div>
+  </div>
+  <audio id="music" data-start="0" data-duration="18" data-volume="0.6" data-fade-in="0.3" data-fade-out="1.5" src="assets/music/{{music}}.m4a"></audio>
+</div>
+<script src="scripts/common.js"></script>
+<script src="scripts/quick.js"></script>
+</body>
+</html>

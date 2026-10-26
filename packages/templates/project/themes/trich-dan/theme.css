@@ -1,0 +1,12 @@
+/* Quote: painterly twilight sky; white text on a deep violet veil. */
+:root {
+  --base: #3a2b6b;
+  --ink: #ffffff;
+  --ink-soft: rgba(255, 255, 255, 0.82);
+  --ink-shadow: 0 4px 20px rgba(14, 8, 40, 0.55);
+  --accent: #ffc66d;
+  --shade: rgba(24, 16, 60, 0.7);
+  --panel: rgba(28, 18, 66, 0.62);
+  --track: rgba(255, 255, 255, 0.2);
+  --frame-inset: 0;
+}

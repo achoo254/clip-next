@@ -31,7 +31,15 @@ AUTH_CLIENT_SECRET=<bằng CLIP_WEB_CLIENT_SECRET của auth-next, ≥ 32 ký t�
 DATABASE_URL=postgres://clip:<mật khẩu>@127.0.0.1:5432/clip
 MEDIA_DIR=/var/www/clip/media
 CHROME_PATH=/usr/bin/google-chrome
+FFMPEG_PATH=/opt/ffmpeg-static/ffmpeg
+FFPROBE_PATH=/opt/ffmpeg-static/ffprobe
 ```
+
+`FFMPEG_PATH`/`FFPROBE_PATH` trỏ tới một bản ffmpeg tĩnh có libx264 (ví dụ bản amd64 "release" của
+johnvansickle.com, giải nén vào `/opt/ffmpeg-static/`, chỉ worker dùng). Có nó, hyperframes ghi thẳng MP4 (chụp
+khung JPEG); không có, worker phải đi đường WebM có kênh alpha (chụp PNG), chậm khoảng 5 lần với nền vẽ AI. Đo trên
+Mac M4 ngày 26/10/2026: mẫu 18 giây "Chuyến đi" mất 36 giây theo đường MP4 và 182 giây cho riêng bước WebM; trên
+`.65` đường WebM sẽ vượt trần 3 phút. ffmpeg của hệ thống vẫn dùng cho việc làm sạch ảnh ở server.
 
 ## Lần đầu
 
@@ -92,7 +100,12 @@ không bị mất video vì một lần deploy.
 - **Mạng của worker:** file server của hyperframes nghe trên mọi interface và không có tuỳ chọn đổi, mà firewall
   của `.65` không chặn cổng cao. `IPAddressDeny=any` của unit là thứ giữ nó chỉ trong loopback; đừng bỏ dòng đó.
   hyperframes, Chrome và ffmpeg chỉ nhận một env tối thiểu (không có `DATABASE_URL`, `AUTH_CLIENT_SECRET`).
-- **Tốc độ:** đo ở `.65` khoảng 5,8 giây render cho 1 giây video với composition trống; mẫu thật (ảnh, chữ) chậm
-  hơn — trên Mac M4 các mẫu thật mất 5,7–7,1 giây/giây video. Mẫu dài nhất (18 giây) có thể gần 3 phút trên `.65`.
+- **Tốc độ:** với ffmpeg có libx264 (`FFMPEG_PATH`), trên Mac M4 các mẫu mất khoảng 2 giây render cho 1 giây video
+  (Tết 12 giây: 24 giây; Chuyến đi 18 giây: 36 giây; Cảm ơn 10 giây: 19 giây). Không có libx264 thì đường WebM chậm
+  khoảng 5 lần (xem mục Env). Đo lại trên `.65` sau khi cài ffmpeg tĩnh.
+- **Thêm mẫu:** một thư mục chủ đề mới trong `packages/templates/project/themes/<chủ-đề>/` (`bg.webp` 1024×1536,
+  `thumb.webp`, `sticker-1..3.webp`, `frame.webp` với bố cục chúc mừng, `theme.css` với màu và khoảng hở của khung)
+  và một mục trong `ENTRIES` của `packages/templates/src/catalog.ts`; test kiểm đủ tệp, `pnpm check:templates` kiểm
+  composition. Không đổi id mẫu đã có: job trong DB tham chiếu id.
 - **Nâng hyperframes:** đổi phiên bản ở `apps/worker/package.json` và `apps/web/package.json` (player, core) cùng
   lúc, chạy `pnpm check:templates` và `pnpm --filter @clip/worker render:samples`, đo lại RAM trên `.65`.

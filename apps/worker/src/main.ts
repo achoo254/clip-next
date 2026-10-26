@@ -17,7 +17,8 @@ const worker = startWorker({
   media,
   pollMs: config.pollMs,
   log,
-  render: (input, signal) => renderVideo(input, { chromePath: config.chromePath, timeoutMs: RENDER_TIMEOUT_MS, signal }),
+  render: (input, signal) =>
+    renderVideo(input, { chromePath: config.chromePath, ffmpegPath: config.ffmpegPath, ffprobePath: config.ffprobePath, timeoutMs: RENDER_TIMEOUT_MS, signal }),
   // A render that timed out may have left Chrome behind (it runs in a process group of its own): exit, and systemd
   // (KillMode=mixed, Restart=on-failure) kills whatever is left in the cgroup and starts a clean worker.
   onTimeout: () => {

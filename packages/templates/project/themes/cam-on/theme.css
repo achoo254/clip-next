@@ -1,0 +1,13 @@
+/* Thank you: cream paper with watercolour peach roses; warm brown text on a light veil. */
+:root {
+  --base: #f2e7d6;
+  --ink: #4a2a17;
+  --ink-soft: #6e4a33;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #c25a2c;
+  --shade: rgba(242, 231, 214, 0.92);
+  --panel: rgba(242, 231, 214, 0.86);
+  --track: rgba(74, 42, 23, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 0;
+}

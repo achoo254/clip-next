@@ -5,8 +5,8 @@
  * made by `pnpm brand:gen`), served in dev and emitted in builds, plus the head tags in index.html. A rebrand is
  * "edit the brand files, pnpm brand:gen, rebuild".
  *
- * clipTemplates: what the in-browser preview loads besides the composition HTML (which the app imports as text):
- * the compositions' scripts and assets under /tpl/, and the hyperframes runtime (@hyperframes/core, same pinned
+ * clipTemplates: what the in-browser preview and the template picker load besides the layout HTML (which the app
+ * imports as text): the layouts' scripts, the themes (AI art, colours, thumbnails) and the fonts and music under /tpl/, and the hyperframes runtime (@hyperframes/core, same pinned
  * version as the worker's renderer) as /tpl/hyperframe.runtime.js. Served from the same origin so the strict CSP
  * (no inline script, no CDN) holds inside the preview frame too.
  */
@@ -33,6 +33,8 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
   '.js': 'text/javascript',
   '.ttf': 'font/ttf',
   '.m4a': 'audio/mp4',
+  '.webp': 'image/webp',
+  '.css': 'text/css',
   '.txt': 'text/plain; charset=utf-8',
 };
 
@@ -119,7 +121,7 @@ function walk(dir: string, prefix = ''): string[] {
 export function clipTemplates(): Plugin {
   return servedFiles('clip-template-files', () => {
     const files = new Map<string, () => Buffer>();
-    for (const sub of ['scripts', 'assets']) {
+    for (const sub of ['scripts', 'assets', 'themes']) {
       for (const rel of walk(path.join(PROJECT_DIR, sub))) files.set(`tpl/${sub}/${rel}`, () => readFileSync(path.join(PROJECT_DIR, sub, rel)));
     }
     files.set('tpl/hyperframe.runtime.js', () => readFileSync(RUNTIME_FILE));

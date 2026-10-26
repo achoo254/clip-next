@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { compositionVariables, templateById, type TemplateId } from '@clip/templates';
-import chucMung from '@clip/templates/project/chuc-mung.html?raw';
-import keNhanh from '@clip/templates/project/ke-nhanh.html?raw';
-import trichDan from '@clip/templates/project/trich-dan.html?raw';
+import { composeTemplateHtml, compositionVariables, templateById, type LayoutId, type TemplateId } from '@clip/templates';
+import greeting from '@clip/templates/project/layouts/greeting.html?raw';
+import quick from '@clip/templates/project/layouts/quick.html?raw';
+import quote from '@clip/templates/project/layouts/quote.html?raw';
 import { useI18n } from '../i18n';
 import { previewDocument, RUNTIME_SRC } from './composition-doc';
 
-const TEMPLATE_HTML: Readonly<Record<TemplateId, string>> = { 'chuc-mung': chucMung, 'ke-nhanh': keNhanh, 'trich-dan': trichDan };
+const LAYOUT_HTML: Readonly<Record<LayoutId, string>> = { greeting, quick, quote };
 
 /** Typing pauses this long before the preview reloads. */
 const DEBOUNCE_MS = 400;
@@ -22,10 +22,10 @@ interface Props {
 export function TemplatePreview({ templateId, fields, photoUrls }: Props): ReactNode {
   const { t } = useI18n();
   const [ready, setReady] = useState(false);
-  const target = useMemo(
-    () => previewDocument(TEMPLATE_HTML[templateId], compositionVariables(templateById(templateId), fields, photoUrls), window.location.origin),
-    [templateId, fields, photoUrls],
-  );
+  const target = useMemo(() => {
+    const spec = templateById(templateId);
+    return previewDocument(composeTemplateHtml(LAYOUT_HTML[spec.layout], spec), compositionVariables(spec, fields, photoUrls), window.location.origin);
+  }, [templateId, fields, photoUrls]);
   const [srcdoc, setSrcdoc] = useState(target);
 
   useEffect(() => {

@@ -7,12 +7,16 @@ import { spawnSync } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { TEMPLATE_IDS } from '@clip/templates';
+import { isTemplateId, TEMPLATE_IDS } from '@clip/templates';
 import { prepareProject } from '@clip/templates/project';
 import { hyperframesBin, hyperframesEnv } from '../render';
 
+// `--templates=a,b` checks only those.
+const flag = process.argv.find((a) => a.startsWith('--templates='));
+const chosen = flag ? flag.slice('--templates='.length).split(',').filter(isTemplateId) : [...TEMPLATE_IDS];
+
 let failed = 0;
-for (const templateId of TEMPLATE_IDS) {
+for (const templateId of chosen) {
   const dir = await mkdtemp(path.join(os.tmpdir(), `clip-check-${templateId}-`));
   try {
     await prepareProject(templateId, dir);

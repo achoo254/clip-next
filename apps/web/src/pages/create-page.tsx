@@ -1,24 +1,28 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { isTemplateId, normalizeText, TEMPLATES, templateById, validateInput, type TemplateId } from '@clip/templates';
+import { isTemplateId, normalizeText, templateById, validateInput, type LayoutId, type TemplateId } from '@clip/templates';
 import { createJob, signInUrl } from '../api';
 import { useAccount } from '../account';
 import { errorMessage } from '../error-message';
 import { useI18n } from '../i18n';
 import { useHere } from '../layout';
 import { TemplatePreview } from '../preview/template-preview';
+import { TemplatePicker } from './template-picker';
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-/** Typed text survives the round trip through sign-in (photos cannot: they stay in the page). */
-const DRAFT_KEY = 'clip.draft';
+/**
+ * Typed text survives the round trip through sign-in (photos cannot: they stay in the page). Drafts are kept per
+ * layout, so switching between templates of one layout (Birthday → Tết) keeps what was typed.
+ */
+const DRAFT_KEY = 'clip.draft.v2';
 
 interface Photo {
   readonly file: File;
   readonly url: string;
 }
 
-type Drafts = Partial<Record<TemplateId, Record<string, string>>>;
+type Drafts = Partial<Record<LayoutId, Record<string, string>>>;
 
 function loadDrafts(): Drafts {
   try {
@@ -46,7 +50,7 @@ export function CreatePage(): ReactNode {
   const [photos, setPhotos] = useState<readonly Photo[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
-  const fields = useMemo(() => drafts[templateId] ?? {}, [drafts, templateId]);
+  const fields = useMemo(() => drafts[spec.layout] ?? {}, [drafts, spec.layout]);
 
   useEffect(() => {
     try {
@@ -70,7 +74,7 @@ export function CreatePage(): ReactNode {
     return Object.fromEntries(spec.fields.map((f) => [f.id, normalizeText(fields[f.id] ?? '') || sample[f.id] || '']));
   }, [fields, spec, templateId, locale]);
 
-  const setField = (id: string, value: string): void => setDrafts((d) => ({ ...d, [templateId]: { ...(d[templateId] ?? {}), [id]: value } }));
+  const setField = (id: string, value: string): void => setDrafts((d) => ({ ...d, [spec.layout]: { ...(d[spec.layout] ?? {}), [id]: value } }));
 
   const addPhotos = (list: FileList | null): void => {
     setMessage(null);
@@ -114,24 +118,8 @@ export function CreatePage(): ReactNode {
       <h1>{t('create.title')}</h1>
       <div className="create-grid">
         <form className="card create-form" onSubmit={(e) => void submit(e)} data-id="create-form">
-          <fieldset className="template-picker">
-            <legend className="label">{t('create.template')}</legend>
-            {TEMPLATES.map((tpl) => (
-              <label key={tpl.id} className="template-option" data-id={`template-${tpl.id}`}>
-                <input
-                  type="radio"
-                  name="template"
-                  value={tpl.id}
-                  checked={tpl.id === templateId}
-                  onChange={() => setParams({ t: tpl.id }, { replace: true })}
-                />
-                <span>
-                  <b>{tpl.name[locale]}</b> <span className="muted small">· {t('create.seconds', { seconds: tpl.durationSeconds })}</span>
-                  <span className="muted small block">{tpl.description[locale]}</span>
-                </span>
-              </label>
-            ))}
-          </fieldset>
+          <TemplatePicker value={templateId} onChange={(id) => setParams({ t: id }, { replace: true })} />
+          <p className="muted small">{spec.description[locale]}</p>
 
           {spec.fields.map((field) => {
             const value = fields[field.id] ?? '';

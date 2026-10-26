@@ -1,0 +1,13 @@
+/* Grand opening: red ribbons, gold sparkles and flower stands; deep red text on a warm cream veil. */
+:root {
+  --base: #f3dcb5;
+  --ink: #6d0d0d;
+  --ink-soft: #8a3a1e;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #c0271c;
+  --shade: rgba(243, 220, 181, 0.92);
+  --panel: rgba(243, 220, 181, 0.86);
+  --track: rgba(109, 13, 13, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 20.9% 18.2% 21.8% 18.3%;
+}

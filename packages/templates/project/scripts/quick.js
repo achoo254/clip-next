@@ -1,5 +1,5 @@
-// "Kể nhanh": a title, then 3–5 points one frame each, Short style, 18 seconds. The frames share the time after the
-// title equally; photos (optional) take turns behind them.
+// Quick-list layout: a title, then 3–5 points one frame each, Short style, 18 seconds. The frames share the time
+// after the title equally; photos (optional) take turns above them.
 (function () {
   "use strict";
   var T = window.ClipTemplate;
@@ -15,13 +15,16 @@
   T.setLine(document.getElementById("title"), T.text(vars, "title"), 120, 64);
   // On screen from 0 s: the first frame is the thumbnail on social players.
   T.animate(document.getElementById("title-card"), "title-out", 0, TITLE_END, "linear");
+  T.animate(document.getElementById("sticker-1"), "sticker-out", TITLE_END - 0.4, 0.4, "linear");
+  T.animate(document.getElementById("sticker-2"), "sticker-in", 0.4, 0.6);
+  T.animate(document.getElementById("sticker-3"), "sticker-in", 0.8, 0.6);
 
   var list = document.getElementById("points");
-  var backdrops = document.getElementById("backdrops");
+  var shots = document.getElementById("shots");
   points.forEach(function (value, index) {
     var start = TITLE_END + index * slot;
     var card = document.createElement("section");
-    card.className = "point";
+    card.className = "panel point " + (photos.length > 0 ? "with-photo" : "text-only");
     var head = document.createElement("div");
     var num = document.createElement("span");
     num.className = "num";
@@ -32,21 +35,21 @@
     head.appendChild(num);
     head.appendChild(of);
     var body = document.createElement("p");
-    T.setLine(body, value, 96, 54);
+    T.setLine(body, value, photos.length > 0 ? 84 : 92, 56);
     card.appendChild(head);
     card.appendChild(body);
     list.appendChild(card);
     T.animate(card, "card", start, slot, "linear");
 
     if (photos.length > 0) {
-      var backdrop = document.createElement("div");
-      backdrop.className = "backdrop";
+      var shot = document.createElement("div");
+      shot.className = "shot";
       var img = document.createElement("img");
       img.src = photos[index % photos.length];
       img.alt = "";
-      backdrop.appendChild(img);
-      backdrops.appendChild(backdrop);
-      T.animate(backdrop, "fade", start, slot, "linear");
+      shot.appendChild(img);
+      shots.appendChild(shot);
+      T.animate(shot, "fade", start, slot, "linear");
     }
   });
 })();

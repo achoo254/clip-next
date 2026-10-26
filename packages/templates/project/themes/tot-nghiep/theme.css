@@ -1,0 +1,13 @@
+/* Graduation: navy and gold around a warm glow; deep navy text on a light veil. */
+:root {
+  --base: #e9dcc0;
+  --ink: #13244a;
+  --ink-soft: #3a4a6e;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #a8740c;
+  --shade: rgba(233, 220, 192, 0.92);
+  --panel: rgba(233, 220, 192, 0.86);
+  --track: rgba(19, 36, 74, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 16.8% 18.9% 21.2% 18.7%;
+}

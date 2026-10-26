@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi" data-composition-variables='[
+  {"id":"line1","type":"string","label":"Dòng 1","default":"Chúc mừng sinh nhật!"},
+  {"id":"line2","type":"string","label":"Dòng 2","default":"Tuổi mới thật nhiều niềm vui"},
+  {"id":"line3","type":"string","label":"Dòng 3","default":"Yêu thương thật nhiều!"},
+  {"id":"photo1","type":"string","label":"Ảnh 1","default":""},
+  {"id":"photo2","type":"string","label":"Ảnh 2","default":""},
+  {"id":"photo3","type":"string","label":"Ảnh 3","default":""}
+]'>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1080, height=1920" />
+<title>Greeting</title>
+<!-- The theme: colours (theme.css) and AI-drawn art (background, photo frame, stickers). -->
+<link rel="stylesheet" href="themes/{{theme}}/theme.css" />
+<style>
+  @font-face { font-family: "Be Vietnam Pro"; src: url("assets/fonts/BeVietnamPro-ExtraBold.ttf") format("truetype"); font-weight: 800; }
+  @font-face { font-family: "Be Vietnam Pro"; src: url("assets/fonts/BeVietnamPro-SemiBold.ttf") format("truetype"); font-weight: 600; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--base); font-family: "Be Vietnam Pro", sans-serif; color: var(--ink); }
+  #stage { position: absolute; inset: 0; }
+  #bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 35%; animation: kenburns 12s linear 0s both; }
+  /* Legibility only: the lower part darkens (or lightens) under the text. */
+  #shade { position: absolute; left: 0; right: 0; bottom: 0; height: 42%; background: linear-gradient(to bottom, transparent, var(--shade) 55%); }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  #scene-1 { opacity: 1; }
+  .framed { position: absolute; }
+  /* The photo shows through the opening of the theme's frame (its insets come from theme.css). */
+  .framed .window { position: absolute; inset: var(--frame-inset); overflow: hidden; }
+  .framed .window img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .framed .frame { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #framed-a, #framed-b { left: 40px; top: 210px; width: 1000px; height: 1000px; }
+  .tile { width: 600px; height: 600px; }
+  #tile-1 { left: -20px; top: 170px; transform: rotate(-5deg); }
+  #tile-2 { left: 500px; top: 260px; transform: rotate(4deg); }
+  #tile-3 { left: 240px; top: 600px; transform: rotate(-1deg); }
+  .line {
+    position: absolute; left: 70px; right: 70px; bottom: 260px; text-align: center; font-weight: 800; line-height: 1.15;
+    text-shadow: var(--ink-shadow); overflow-wrap: anywhere;
+  }
+  .sticker { position: absolute; }
+  /* Each sticker sits in a box of its slot, whatever its shape. */
+  .sticker img { display: block; width: 100%; height: 100%; object-fit: contain; animation: float 3.2s ease-in-out 0s infinite alternate both; }
+  #sticker-1 { left: 0; top: 110px; width: 280px; height: 280px; }
+  #sticker-2 { right: 0; top: 1000px; width: 280px; height: 280px; }
+  #sticker-3 { right: 20px; top: 90px; width: 260px; height: 260px; }
+  #sticker-2 img { animation-delay: -1.6s; }
+  @keyframes kenburns { from { transform: scale(1) translateY(0); } to { transform: scale(1.12) translateY(-30px); } }
+  @keyframes float { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-22px) rotate(3deg); } }
+  @keyframes scene-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes scene-out { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes pop { 0% { transform: scale(0.82) rotate(var(--tilt, 0deg)); opacity: 1; } 70% { transform: scale(1.04) rotate(var(--tilt, 0deg)); } 100% { transform: scale(1) rotate(var(--tilt, 0deg)); opacity: 1; } }
+  @keyframes rise { from { transform: translateY(70px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes sticker-in { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="greeting" data-start="0" data-duration="12" data-width="1080" data-height="1920" data-no-timeline>
+  <div id="stage" class="clip" data-start="0" data-duration="12" data-track-index="0" data-theme-dir="themes/{{theme}}/">
+    <img id="bg" src="themes/{{theme}}/bg.webp" alt="" data-layout-allow-overflow />
+    <div id="shade"></div>
+    <section id="scene-1" class="scene">
+      <div id="framed-a" class="framed"></div>
+      <h1 id="line1" class="line"></h1>
+    </section>
+    <section id="scene-2" class="scene">
+      <div id="framed-b" class="framed"></div>
+      <h1 id="line2" class="line"></h1>
+    </section>
+    <section id="scene-3" class="scene">
+      <div id="collage"></div>
+      <h1 id="line3" class="line"></h1>
+    </section>
+    <div id="sticker-1" class="sticker"><img src="themes/{{theme}}/sticker-1.webp" alt="" /></div>
+    <div id="sticker-2" class="sticker"><img src="themes/{{theme}}/sticker-2.webp" alt="" /></div>
+    <div id="sticker-3" class="sticker"><img src="themes/{{theme}}/sticker-3.webp" alt="" /></div>
+  </div>
+  <audio id="music" data-start="0" data-duration="12" data-volume="0.7" data-fade-in="0.3" data-fade-out="1.5" src="assets/music/{{music}}.m4a"></audio>
+</div>
+<script src="scripts/common.js"></script>
+<script src="scripts/greeting.js"></script>
+</body>
+</html>

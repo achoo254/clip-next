@@ -121,7 +121,7 @@ const CREDITS: readonly { readonly what: string; readonly who: string; readonly 
   { what: 'Be Vietnam Pro', who: 'The Be Vietnam Pro Project Authors', licence: 'SIL Open Font License 1.1', url: 'https://github.com/google/fonts/tree/main/ofl/bevietnampro' },
   { what: 'Inter, JetBrains Mono', who: 'Rasmus Andersson; JetBrains', licence: 'SIL Open Font License 1.1', url: 'https://fontsource.org' },
   {
-    what: 'Fetch Dance, Bicycle, Chillin Poupi',
+    what: 'Fetch Dance, Bicycle, Chillin Poupi, Good Fellow',
     who: 'Komiku (Loyalty Freak Music), album "Poupi\'s Incredible Adventures"',
     licence: 'CC0 1.0',
     url: 'https://opengameart.org/content/poupis-incredible-adventures-full-album',
@@ -145,8 +145,11 @@ export function CreditsPage(): ReactNode {
         ))}
       </ul>
       <p>
-        {locale === 'vi' ? 'Biểu tượng app' : 'App icon'}: AI-generated with OpenAI gpt-image for the hoandat ecosystem; owned by hoandat, all
-        rights reserved (not CC0).
+        {locale === 'vi'
+          ? 'Hình nền, khung ảnh và hình trang trí của các mẫu, cùng biểu tượng app'
+          : "The templates' backgrounds, photo frames and stickers, and the app icon"}
+        : AI-generated with OpenAI gpt-image for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0).{' '}
+        {locale === 'vi' ? 'Chúng không thuộc giấy phép MIT của mã nguồn.' : "They are not covered by the code's MIT licence."}
       </p>
     </Page>
   );

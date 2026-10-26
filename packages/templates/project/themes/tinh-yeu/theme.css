@@ -1,0 +1,13 @@
+/* Love: blush pink and red roses; deep rose text on a light veil. */
+:root {
+  --base: #f6d5d3;
+  --ink: #5c0f24;
+  --ink-soft: #8a3a4e;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #c8102e;
+  --shade: rgba(246, 213, 211, 0.92);
+  --panel: rgba(246, 213, 211, 0.86);
+  --track: rgba(92, 15, 36, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 21.1% 22.1% 24.9% 22.4%;
+}

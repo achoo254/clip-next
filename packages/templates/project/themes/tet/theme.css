@@ -1,0 +1,13 @@
+/* Tet: red lacquer and gold with apricot and peach blossoms; deep red text on a warm cream veil. */
+:root {
+  --base: #f2dfc4;
+  --ink: #7a0f12;
+  --ink-soft: #8f3a22;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #c0271c;
+  --shade: rgba(242, 223, 196, 0.92);
+  --panel: rgba(242, 223, 196, 0.86);
+  --track: rgba(122, 15, 18, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 19.1% 18.9% 22.8% 19.1%;
+}

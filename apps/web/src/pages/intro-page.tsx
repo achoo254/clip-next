@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { MAX_DURATION_SECONDS, TEMPLATES } from '@clip/templates';
+import { MAX_DURATION_SECONDS, TEMPLATES, thumbnailPath } from '@clip/templates';
+import { TEMPLATE_BASE } from '../preview/composition-doc';
 import { signInUrl } from '../api';
 import { useAccount } from '../account';
 import { brand } from '../brand';
@@ -35,13 +36,14 @@ export function IntroPage(): ReactNode {
 
       <section className="stack" aria-labelledby="intro-templates">
         <h2 id="intro-templates">{t('intro.templates')}</h2>
+        <p className="muted">{t('intro.count', { count: TEMPLATES.length })}</p>
         <ul className="template-cards">
           {TEMPLATES.map((tpl) => (
-            <li key={tpl.id} className="card template-card">
-              <h3>{tpl.name[locale]}</h3>
-              <p className="muted">{tpl.description[locale]}</p>
-              <Link to={`/tao?t=${tpl.id}`} data-id={`intro-template-${tpl.id}`}>
-                {t('intro.start')} →
+            <li key={tpl.id}>
+              <Link className="template-card" to={`/tao?t=${tpl.id}`} data-id={`intro-template-${tpl.id}`}>
+                <img className="template-thumb" src={`${TEMPLATE_BASE}${thumbnailPath(tpl)}`} width="240" height="360" alt="" loading="lazy" />
+                <b>{tpl.name[locale]}</b>
+                <span className="muted small">{tpl.description[locale]}</span>
               </Link>
             </li>
           ))}

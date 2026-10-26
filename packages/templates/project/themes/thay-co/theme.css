@@ -1,0 +1,13 @@
+/* Teachers' Day: cream paper, roses, chrysanthemums and books; deep plum text on a light veil. */
+:root {
+  --base: #f3e6d8;
+  --ink: #4b1d3a;
+  --ink-soft: #7b4a63;
+  --ink-shadow: 0 2px 14px rgba(255, 255, 255, 0.85);
+  --accent: #b83262;
+  --shade: rgba(243, 230, 216, 0.92);
+  --panel: rgba(243, 230, 216, 0.86);
+  --track: rgba(75, 29, 58, 0.15);
+  /* The opening of frame.webp (top right bottom left), measured from its alpha; 0 when the theme has no frame. */
+  --frame-inset: 17.8% 18% 20.5% 17.4%;
+}

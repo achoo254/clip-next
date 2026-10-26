@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="vi" data-composition-variables='[
+  {"id":"quote","type":"string","label":"Câu trích dẫn","default":"Hãy sống như thể ngày mai bạn sẽ chết, hãy học như thể bạn sẽ sống mãi."},
+  {"id":"author","type":"string","label":"Tác giả","default":"Mahatma Gandhi"}
+]'>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1080, height=1920" />
+<title>Quote</title>
+<!-- The theme: colours (theme.css) and AI-drawn art (background, stickers). -->
+<link rel="stylesheet" href="themes/{{theme}}/theme.css" />
+<style>
+  @font-face { font-family: "Be Vietnam Pro"; src: url("assets/fonts/BeVietnamPro-ExtraBold.ttf") format("truetype"); font-weight: 800; }
+  @font-face { font-family: "Be Vietnam Pro"; src: url("assets/fonts/BeVietnamPro-SemiBold.ttf") format("truetype"); font-weight: 600; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--base); font-family: "Be Vietnam Pro", sans-serif; color: var(--ink); }
+  #stage { position: absolute; inset: 0; }
+  #bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 50%; animation: kenburns 10s linear 0s both; }
+  /* The quote sits on a translucent panel (legibility only). */
+  #card { position: absolute; left: 70px; right: 70px; top: 50%; transform: translateY(-50%); padding: 70px 64px; border-radius: 48px; background: var(--panel); }
+  #mark { font-weight: 800; font-size: 240px; line-height: 0.8; height: 150px; color: var(--accent); }
+  #quote { font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; text-shadow: var(--ink-shadow); }
+  #author { margin-top: 48px; font-weight: 600; font-size: 50px; color: var(--ink-soft); }
+  #author::before { content: "— "; }
+  #author.empty { display: none; }
+  .sticker { position: absolute; }
+  /* Each sticker sits in a box of its slot, whatever its shape. */
+  .sticker img { display: block; width: 100%; height: 100%; object-fit: contain; animation: float 3.6s ease-in-out 0s infinite alternate both; }
+  #sticker-1 { right: 30px; top: 150px; width: 260px; height: 260px; }
+  #sticker-2 { left: 30px; bottom: 40px; width: 230px; height: 230px; }
+  #sticker-3 { right: 40px; bottom: 60px; width: 200px; height: 200px; }
+  #sticker-2 img { animation-delay: -1.8s; }
+  @keyframes kenburns { from { transform: scale(1.02); } to { transform: scale(1.12) translateY(-30px); } }
+  @keyframes float { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-20px) rotate(3deg); } }
+  @keyframes rise { from { transform: translateY(60px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes sticker-in { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="quote" data-start="0" data-duration="10" data-width="1080" data-height="1920" data-no-timeline>
+  <div id="stage" class="clip" data-start="0" data-duration="10" data-track-index="0">
+    <img id="bg" src="themes/{{theme}}/bg.webp" alt="" data-layout-allow-overflow />
+    <div id="card">
+      <div id="mark">“</div>
+      <h1 id="quote"></h1>
+      <p id="author"></p>
+    </div>
+    <div id="sticker-1" class="sticker"><img src="themes/{{theme}}/sticker-1.webp" alt="" /></div>
+    <div id="sticker-2" class="sticker"><img src="themes/{{theme}}/sticker-2.webp" alt="" /></div>
+    <div id="sticker-3" class="sticker"><img src="themes/{{theme}}/sticker-3.webp" alt="" /></div>
+  </div>
+  <audio id="music" data-start="0" data-duration="10" data-volume="0.6" data-fade-in="0.5" data-fade-out="1.5" src="assets/music/{{music}}.m4a"></audio>
+</div>
+<script src="scripts/common.js"></script>
+<script src="scripts/quote.js"></script>
+</body>
+</html>

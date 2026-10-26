@@ -1,11 +1,14 @@
 /**
  * The one module that runs hyperframes (pinned in package.json; the server measurement was made with 0.8.201).
  *
- * The server's ffmpeg has no libx264, so hyperframes cannot write MP4 there: it renders WebM (VP9) with the
- * low-memory profile and one Chrome worker, then ffmpeg turns that into H.264 MP4 — libx264 when the local ffmpeg
- * has it, else libopenh264 (same choice as tieu-de-next's Shorts). On Linux both run under `nice` so the shared
- * server's other apps keep their CPU. Measured on the server: about 5.8 s of render per second of video, at least
- * 2.4 GB memory left while rendering.
+ * Two paths, by what the ffmpeg in use can encode (FFMPEG_PATH, else the one on PATH):
+ * - with libx264, hyperframes writes H.264 MP4 itself (JPEG frame capture), then ffmpeg only moves the index to the
+ *   front (`+faststart`, no re-encode);
+ * - without it (the server's distribution ffmpeg), hyperframes can only write WebM, which it captures as PNG with
+ *   alpha — about five times slower for the AI-drawn backgrounds (Mac: 110 s against 20 s for a 10 s video) — and
+ *   ffmpeg re-encodes that to H.264 with libopenh264 (same choice as tieu-de-next's Shorts).
+ * Both use hyperframes' low-memory profile and one Chrome worker; on Linux the tools run under `nice` so the shared
+ * server's other apps keep their CPU.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { cp, mkdir, rename, rm, stat, writeFile } from 'node:fs/promises';
@@ -33,6 +36,9 @@ export interface RenderOptions {
   readonly timeoutMs: number;
   /** Aborts the render (the worker is stopping): the tools are killed and the render rejects with `aborted`. */
   readonly signal?: AbortSignal;
+  /** ffmpeg and ffprobe to use (for hyperframes too); unset: the ones on PATH. */
+  readonly ffmpegPath?: string;
+  readonly ffprobePath?: string;
 }
 
 export interface RenderResult {
@@ -69,7 +75,7 @@ const PASSED_ENV = ['PATH', 'HOME', 'TMPDIR', 'LANG', 'LC_ALL', 'TZ'] as const;
  * the sign-in secret, which a compromised renderer must not read); no telemetry, update checks, skill downloads or
  * automatic installs; our Chrome.
  */
-export function hyperframesEnv(chromePath: string | undefined): NodeJS.ProcessEnv {
+export function hyperframesEnv(chromePath: string | undefined, tools: { ffmpegPath?: string; ffprobePath?: string } = {}): NodeJS.ProcessEnv {
   const passed = Object.fromEntries(PASSED_ENV.flatMap((key) => (process.env[key] === undefined ? [] : [[key, process.env[key]]])));
   return {
     ...passed,
@@ -79,20 +85,25 @@ export function hyperframesEnv(chromePath: string | undefined): NodeJS.ProcessEn
     HYPERFRAMES_SKIP_SKILLS: '1',
     HYPERFRAMES_NO_AUTO_INSTALL: '1',
     ...(chromePath ? { HYPERFRAMES_BROWSER_PATH: chromePath } : {}),
+    ...(tools.ffmpegPath ? { HYPERFRAMES_FFMPEG_PATH: tools.ffmpegPath } : {}),
+    ...(tools.ffprobePath ? { HYPERFRAMES_FFPROBE_PATH: tools.ffprobePath } : {}),
   };
 }
 
-let codecArgs: readonly string[] | null = null;
+const x264Support = new Map<string, boolean>();
 
-/** H.264 settings for the ffmpeg at hand: libx264 when it has it, else libopenh264. */
-export function videoCodecArgs(): readonly string[] {
-  if (codecArgs) return codecArgs;
-  const encoders = spawnSync('ffmpeg', ['-hide_banner', '-encoders'], { encoding: 'utf8' }).stdout ?? '';
-  codecArgs = /\blibx264\b/.test(encoders)
-    ? ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-maxrate', '4500k', '-bufsize', '9000k']
-    : ['-c:v', 'libopenh264', '-b:v', '3500k', '-maxrate', '4500k'];
-  return codecArgs;
+/** Whether this ffmpeg can encode H.264 with libx264 (asked once per binary). */
+export function hasLibx264(ffmpeg: string): boolean {
+  const known = x264Support.get(ffmpeg);
+  if (known !== undefined) return known;
+  const encoders = spawnSync(ffmpeg, ['-hide_banner', '-encoders'], { encoding: 'utf8' }).stdout ?? '';
+  const supported = /\blibx264\b/.test(encoders);
+  x264Support.set(ffmpeg, supported);
+  return supported;
 }
+
+/** The quality of the MP4 hyperframes writes itself (its default CRF 16 doubles the file for no visible gain). */
+const MP4_CRF = '23';
 
 /** `command args`, under `nice -n 15` on Linux (the production server). */
 function niced(command: string, args: readonly string[]): [string, string[]] {
@@ -179,9 +190,9 @@ interface ProbedVideo {
 }
 
 /** Codec, size and length of a video file, from ffprobe. */
-export function probeVideo(file: string): ProbedVideo | null {
+export function probeVideo(file: string, ffprobe = 'ffprobe'): ProbedVideo | null {
   const out = spawnSync(
-    'ffprobe',
+    ffprobe,
     ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=codec_name,width,height:format=duration', '-of', 'json', file],
     { encoding: 'utf8' },
   ).stdout;
@@ -202,7 +213,8 @@ export function probeVideo(file: string): ProbedVideo | null {
 
 /**
  * Renders one template into an MP4 at `input.output`: lays out the project and photos in the work directory,
- * renders WebM with hyperframes, encodes H.264, checks the result with ffprobe and moves it into place.
+ * renders with hyperframes (MP4 directly, or WebM then H.264; see the top of this file), checks the result with
+ * ffprobe and moves it into place.
  */
 export async function renderVideo(input: RenderInput, options: RenderOptions): Promise<RenderResult> {
   const started = Date.now();
@@ -216,18 +228,18 @@ export async function renderVideo(input: RenderInput, options: RenderOptions): P
     const variablesFile = path.join(workDir, 'variables.json');
     await writeFile(variablesFile, JSON.stringify(input.variables));
 
-    const env = hyperframesEnv(options.chromePath);
-    const webm = path.join(workDir, 'render.webm');
+    const ffmpeg = options.ffmpegPath ?? 'ffmpeg';
+    const env = hyperframesEnv(options.chromePath, options);
+    const direct = hasLibx264(ffmpeg);
+    const rendered = path.join(workDir, direct ? 'render.mp4' : 'render.webm');
+    const format = direct ? ['--format', 'mp4', '--crf', MP4_CRF] : ['--format', 'webm', '--vp9-cpu-used', '8'];
     await runTool(
       process.execPath,
       [
         hyperframesBin(),
         'render',
         workDir,
-        '--format',
-        'webm',
-        '--vp9-cpu-used',
-        '8',
+        ...format,
         '--low-memory-mode',
         '--workers',
         '1',
@@ -236,37 +248,23 @@ export async function renderVideo(input: RenderInput, options: RenderOptions): P
         '--variables-file',
         variablesFile,
         '--output',
-        webm,
+        rendered,
       ],
       { env, deadline, code: 'render-failed', signal: options.signal },
     );
 
     const mp4 = path.join(workDir, 'video.mp4');
-    await runTool(
-      'ffmpeg',
-      [
-        '-v',
-        'error',
-        '-y',
-        '-i',
-        webm,
-        ...videoCodecArgs(),
-        '-pix_fmt',
-        'yuv420p',
-        '-threads',
-        '2',
-        '-c:a',
-        'aac',
-        '-b:a',
-        '128k',
-        '-movflags',
-        '+faststart',
-        mp4,
-      ],
-      { env, deadline, code: 'encode-failed', signal: options.signal },
-    );
+    const encode = direct
+      ? ['-c', 'copy']
+      : ['-c:v', 'libopenh264', '-b:v', '3500k', '-maxrate', '4500k', '-pix_fmt', 'yuv420p', '-threads', '2', '-c:a', 'aac', '-b:a', '128k'];
+    await runTool(ffmpeg, ['-v', 'error', '-y', '-i', rendered, ...encode, '-movflags', '+faststart', mp4], {
+      env,
+      deadline,
+      code: 'encode-failed',
+      signal: options.signal,
+    });
 
-    const probed = probeVideo(mp4);
+    const probed = probeVideo(mp4, options.ffprobePath);
     if (!probed || probed.codec !== 'h264' || probed.width !== WIDTH || probed.height !== HEIGHT || probed.duration > MAX_DURATION_SECONDS + 0.5) {
       throw new RenderError('bad-output', JSON.stringify(probed));
     }

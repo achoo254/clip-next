@@ -15,9 +15,13 @@ hoandat.com; app thuộc tầng giải trí của hệ sinh thái `*-next`.
 | `packages/db` (`@clip/db`) | Schema Drizzle, migration, truy vấn hàng đợi và giới hạn, bố cục thư mục media |
 | `infra/` | nginx, systemd (server, worker, timer xoá file), `deploy.sh` |
 
-Ba mẫu: **Chúc mừng** (3 dòng chúc, 1–3 ảnh, pháo giấy, 12 giây), **Kể nhanh** (tiêu đề + 3–5 ý, ảnh tuỳ chọn,
-18 giây), **Trích dẫn** (một câu lớn trên nền chuyển động, 10 giây). Hoạt ảnh viết bằng CSS animation (runtime của
-hyperframes tua được), chữ dùng font Be Vietnam Pro tự host, nhạc CC0 (`assets/CREDITS.md`).
+Mẫu = **bố cục × chủ đề**. Ba bố cục (`project/layouts/`): chúc mừng (3 dòng, 1–3 ảnh trong khung, 12 giây), kể
+nhanh (tiêu đề + 3–5 ý, ảnh tuỳ chọn, 18 giây), trích dẫn (một câu + tác giả, 10 giây). Mỗi chủ đề
+(`project/themes/<chủ-đề>/`) là một bộ ảnh vẽ bằng AI (nền dọc, khung ảnh, sticker nền trong suốt, ảnh thu nhỏ),
+bảng màu chữ (`theme.css`) và một bản nhạc; danh sách mẫu ở `packages/templates/src/catalog.ts`. Thêm mẫu là thêm
+một chủ đề, không thêm bố cục. Không có hình trang trí vẽ bằng CSS; gradient và lớp nền mờ chỉ để chữ dễ đọc.
+Chuyển động viết bằng CSS animation (runtime của hyperframes tua được), chữ dùng font Be Vietnam Pro tự host, nhạc
+CC0.
 
 ## Giới hạn
 
@@ -67,6 +71,6 @@ Xem [`docs/deployment-guide.md`](docs/deployment-guide.md).
 
 ## Giấy phép
 
-Mã nguồn: MIT ([`LICENSE`](LICENSE)). Font, nhạc và biểu tượng app có giấy phép riêng:
-[`assets/CREDITS.md`](assets/CREDITS.md). Biểu tượng app: AI-generated with OpenAI gpt-image for the hoandat
-ecosystem; owned by hoandat, all rights reserved (not CC0).
+Mã nguồn: MIT ([`LICENSE`](LICENSE)). Font, nhạc, hình vẽ của các mẫu và biểu tượng app **không** thuộc giấy
+phép MIT; xem [`assets/CREDITS.md`](assets/CREDITS.md). Hình vẽ của các mẫu và biểu tượng app: AI-generated with
+OpenAI gpt-image for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0).

@@ -1,0 +1,12 @@
+/* Quick list: deep indigo and violet art with amber light; white text on a dark veil. */
+:root {
+  --base: #1d1147;
+  --ink: #ffffff;
+  --ink-soft: rgba(255, 255, 255, 0.78);
+  --ink-shadow: 0 4px 20px rgba(10, 4, 30, 0.6);
+  --accent: #ffb02e;
+  --shade: rgba(16, 8, 44, 0.8);
+  --panel: rgba(22, 10, 56, 0.74);
+  --track: rgba(255, 255, 255, 0.2);
+  --frame-inset: 0;
+}
