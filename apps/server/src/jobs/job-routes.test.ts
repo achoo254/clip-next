@@ -120,6 +120,22 @@ describe('POST /api/jobs', () => {
     expect(res.body.error).toBe('photo-type');
   });
 
+  it('refuses a blank photo (one flat colour) with 400 photo-blank, and queues nothing', async () => {
+    const { cookie } = await app.signIn('sub-1');
+    const blank = spawnSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=white:s=800x600', '-frames:v', '1', '-f', 'mjpeg', 'pipe:1']).stdout;
+    const res = await app
+      .http()
+      .post('/api/jobs')
+      .set('Cookie', cookie)
+      .set('Origin', ORIGIN)
+      .field('templateId', 'chuc-mung')
+      .field('fields', JSON.stringify(WISHES))
+      .attach('photos', blank, { filename: 'white.jpg', contentType: 'image/jpeg' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('photo-blank');
+    expect(await app.handle.db.select().from(renderJobs)).toHaveLength(0);
+  });
+
   it('refuses more than three photos and invalid fields', async () => {
     const { cookie } = await app.signIn('sub-1');
     const photo = jpegWithExif(64, 64);

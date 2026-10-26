@@ -105,6 +105,30 @@ export function hasLibx264(ffmpeg: string): boolean {
 /** The quality of the MP4 hyperframes writes itself (its default CRF 16 doubles the file for no visible gain). */
 const MP4_CRF = '23';
 
+/**
+ * The `hyperframes render` arguments of one job. `--no-best-effort`: a photo, font or track that did not load fails
+ * the render (and so the job) instead of leaving an empty slot in the video. `--strict-variables`: a variable the
+ * composition does not declare fails it too.
+ */
+export function hyperframesRenderArgs(workDir: string, variablesFile: string, output: string, directMp4: boolean): string[] {
+  const format = directMp4 ? ['--format', 'mp4', '--crf', MP4_CRF] : ['--format', 'webm', '--vp9-cpu-used', '8'];
+  return [
+    'render',
+    workDir,
+    ...format,
+    '--low-memory-mode',
+    '--workers',
+    '1',
+    '--quiet',
+    '--no-best-effort',
+    '--strict-variables',
+    '--variables-file',
+    variablesFile,
+    '--output',
+    output,
+  ];
+}
+
 /** `command args`, under `nice -n 15` on Linux (the production server). */
 function niced(command: string, args: readonly string[]): [string, string[]] {
   return process.platform === 'linux' ? ['nice', ['-n', '15', command, ...args]] : [command, [...args]];
@@ -232,24 +256,9 @@ export async function renderVideo(input: RenderInput, options: RenderOptions): P
     const env = hyperframesEnv(options.chromePath, options);
     const direct = hasLibx264(ffmpeg);
     const rendered = path.join(workDir, direct ? 'render.mp4' : 'render.webm');
-    const format = direct ? ['--format', 'mp4', '--crf', MP4_CRF] : ['--format', 'webm', '--vp9-cpu-used', '8'];
     await runTool(
       process.execPath,
-      [
-        hyperframesBin(),
-        'render',
-        workDir,
-        ...format,
-        '--low-memory-mode',
-        '--workers',
-        '1',
-        '--quiet',
-        '--strict-variables',
-        '--variables-file',
-        variablesFile,
-        '--output',
-        rendered,
-      ],
+      [hyperframesBin(), ...hyperframesRenderArgs(workDir, variablesFile, rendered, direct)],
       { env, deadline, code: 'render-failed', signal: options.signal },
     );
 

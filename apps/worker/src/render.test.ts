@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hyperframesEnv, RenderError, runTool } from './render';
+import { hyperframesEnv, hyperframesRenderArgs, RenderError, runTool } from './render';
 
 function alive(pid: number): boolean {
   try {
@@ -66,6 +66,18 @@ describe('hyperframesEnv', () => {
       expect(env.HYPERFRAMES_NO_TELEMETRY).toBe('1');
     } finally {
       process.env = saved;
+    }
+  });
+});
+
+describe('hyperframesRenderArgs', () => {
+  it('fails the render on missing or unready media, for both output paths', () => {
+    for (const direct of [true, false]) {
+      const args = hyperframesRenderArgs('/w', '/w/variables.json', '/w/out', direct);
+      expect(args).toContain('--no-best-effort');
+      expect(args).toContain('--strict-variables');
+      expect(args).not.toContain('--best-effort');
+      expect(args.slice(args.indexOf('--format'), args.indexOf('--format') + 2)).toEqual(['--format', direct ? 'mp4' : 'webm']);
     }
   });
 });

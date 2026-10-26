@@ -56,7 +56,7 @@ export class Semaphore {
 const photoSlots = new Semaphore(MAX_CONCURRENT_PHOTOS);
 
 export class PhotoError extends Error {
-  constructor(readonly code: 'photo-unreadable' | 'photo-too-big') {
+  constructor(readonly code: 'photo-unreadable' | 'photo-too-big' | 'photo-blank') {
     super(code);
     this.name = 'PhotoError';
   }
@@ -144,8 +144,10 @@ async function cleanTyped(bytes: Uint8Array, type: PhotoType, tmpDir: string, ou
       upload,
       '-frames:v',
       '1',
-      '-vf',
-      `scale=w='min(${MAX_PHOTO_SIDE},iw)':h='min(${MAX_PHOTO_SIDE},ih)':force_original_aspect_ratio=decrease,format=yuvj420p`,
+      // Transparent pixels (PNG, WebP) are laid on white explicitly: a copy filled white, the picture over it.
+      '-filter_complex',
+      `[0:v]scale=w='min(${MAX_PHOTO_SIDE},iw)':h='min(${MAX_PHOTO_SIDE},ih)':force_original_aspect_ratio=decrease,format=rgba,split[a][b];` +
+        `[a]drawbox=c=white:t=fill[white];[white][b]overlay=format=auto,format=yuvj420p`,
       '-map_metadata',
       '-1',
       '-q:v',
@@ -156,7 +158,44 @@ async function cleanTyped(bytes: Uint8Array, type: PhotoType, tmpDir: string, ou
     ]).catch(() => {
       throw new PhotoError('photo-unreadable');
     });
+    // A photo of one flat colour (a blank screenshot, a fully transparent PNG) would show as an empty frame in the
+    // video: it is refused here, before the job is queued.
+    const luma = await lumaRange(output).catch(() => {
+      throw new PhotoError('photo-unreadable');
+    });
+    if (luma.max - luma.min < MIN_LUMA_RANGE) throw new PhotoError('photo-blank');
+  } catch (error) {
+    await rm(output, { force: true });
+    throw error;
   } finally {
     await rm(upload, { force: true });
   }
+}
+
+/** Below this spread between the darkest and brightest luma (0–255) a photo counts as blank. */
+export const MIN_LUMA_RANGE = 8;
+
+/** The darkest and brightest luma of a picture, from ffmpeg's signalstats. */
+export async function lumaRange(file: string): Promise<{ min: number; max: number }> {
+  const out = await runTool('ffmpeg', [
+    '-v',
+    'error',
+    '-threads',
+    '1',
+    '-protocol_whitelist',
+    'file',
+    '-f',
+    'image2',
+    '-i',
+    file,
+    '-vf',
+    'signalstats,metadata=print:file=-',
+    '-f',
+    'null',
+    '-',
+  ]);
+  const min = Number(/lavfi\.signalstats\.YMIN=(\d+)/.exec(out)?.[1]);
+  const max = Number(/lavfi\.signalstats\.YMAX=(\d+)/.exec(out)?.[1]);
+  if (!Number.isFinite(min) || !Number.isFinite(max)) throw new Error('no signalstats');
+  return { min, max };
 }

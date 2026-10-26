@@ -15,6 +15,7 @@ const KNOWN: ReadonlySet<string> = new Set([
   'photo-type',
   'photo-unreadable',
   'photo-too-big',
+  'photo-blank',
   'server-busy',
   'too-many-requests',
 ]);
