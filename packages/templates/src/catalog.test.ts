@@ -7,6 +7,7 @@ import {
   CUC_CHOICES,
   fieldsFromQuery,
   isTemplateId,
+  linkParams,
   LAYOUT_IDS,
   LAYOUTS,
   MAX_DURATION_SECONDS,
@@ -93,6 +94,14 @@ describe('the birth chart template (la-so)', () => {
       line1: 'Tuổi Mùi',
       reading: 'Hiền hòa.',
     });
+  });
+
+  it('reads a link’s query and #fragment together, the fragment winning', () => {
+    const link = linkParams('?t=la-so&animal=mui&star=&cuc=moc-tam&line1=from-query', '#name=Lan&line1=Tu%E1%BB%95i+M%C3%B9i&reading=Hi%E1%BB%81n+h%C3%B2a.');
+    expect(link.get('t')).toBe('la-so');
+    expect(fieldsFromQuery(templateById('la-so'), link)).toEqual({ animal: 'mui', star: '', cuc: 'moc-tam', name: 'Lan', line1: 'Tuổi Mùi', reading: 'Hiền hòa.' });
+    expect([...linkParams('', '')]).toEqual([]);
+    expect(linkParams('?a=1', 'b=2').get('b')).toBe('2');
   });
 
   it('keeps an empty optional field from a link as a choice, but not an empty required one', () => {

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import {
   fieldsFromQuery,
+  linkParams,
   isAllowedChoice,
   isTemplateId,
   normalizeText,
@@ -69,27 +70,31 @@ export function CreatePage(): ReactNode {
   const { me } = useAccount();
   const here = useHere();
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const requested = params.get('t');
   const templateId: TemplateId = isTemplateId(requested) ? requested : 'chuc-mung';
   const spec = templateById(templateId);
-  // A link may fill the template in (`/tao?t=la-so&animal=mui&line1=…`, e.g. from the Tử Vi app): its valid values
-  // replace this layout's draft when the page opens.
+  // A link may fill the template in (`/tao?t=la-so&animal=mui#name=Lan&line1=…`, e.g. from the Tử Vi app; free text
+  // rides in the #fragment, see linkParams): its valid values replace this layout's draft when the page opens.
+  const link = useMemo(() => linkParams(location.search, location.hash), [location.search, location.hash]);
   const [drafts, setDrafts] = useState<Drafts>(() => {
     const saved = loadDrafts();
-    return linkFills(spec, params) ? { ...saved, [spec.layout]: fieldsFromQuery(spec, params) } : saved;
+    return linkFills(spec, link) ? { ...saved, [spec.layout]: fieldsFromQuery(spec, link) } : saved;
   });
   const [photos, setPhotos] = useState<readonly Photo[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const fields = useMemo(() => drafts[spec.layout] ?? {}, [drafts, spec.layout]);
 
-  // The filled-in values then leave the address, so a later sign-in round trip keeps what was edited since.
+  // The filled-in values then leave the address (query and fragment), so they are not kept in the history and a later
+  // sign-in round trip keeps what was edited since.
   useEffect(() => {
-    if (linkFills(spec, params)) setParams({ t: templateId }, { replace: true });
-  }, [params, setParams, spec, templateId]);
+    if (linkFills(spec, link)) void navigate({ search: `?t=${templateId}`, hash: '' }, { replace: true });
+  }, [link, navigate, spec, templateId]);
 
   // Opened from such a link, the page starts at the filled-in template rather than at the top of the template grid.
-  const [openedFromLink] = useState(() => linkFills(spec, params));
+  const [openedFromLink] = useState(() => linkFills(spec, link));
   const filledRef = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
     if (openedFromLink) filledRef.current?.scrollIntoView({ block: 'start' });

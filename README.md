@@ -18,8 +18,9 @@ hoandat.com; app thuộc tầng giải trí của hệ sinh thái `*-next`.
 Mẫu = **bố cục × chủ đề**. Bốn bố cục (`project/layouts/`): chúc mừng (3 dòng, 1–3 ảnh trong khung, 12 giây), kể
 nhanh (tiêu đề + 3–5 ý, ảnh tuỳ chọn, 18 giây), trích dẫn (một câu + tác giả, 10 giây), lá số (con giáp, chính
 tinh, cục chọn theo id trong bộ hình của chủ đề + 3 dòng chữ và tên tuỳ chọn, 18 giây; mở từ Tử Vi qua
-`/tao?t=la-so&animal=…&star=…&cuc=…&line1=…&line2=…&reading=…&name=…`, mọi tham số được kiểm theo danh sách cho phép,
-sai thì bỏ qua). Mỗi chủ đề
+`/tao?t=la-so&animal=…&star=…&cuc=…#name=…&line1=…&line2=…&reading=…`: id trong query, chữ tự do (tên, các dòng) trong
+`#fragment` để không bao giờ tới log máy chủ; mọi giá trị được kiểm theo danh sách cho phép và giới hạn ô, sai thì bỏ
+qua, rồi query và fragment được xoá khỏi thanh địa chỉ). Mỗi chủ đề
 (`project/themes/<chủ-đề>/`) là một bộ ảnh vẽ bằng AI (nền dọc, khung ảnh, sticker nền trong suốt, ảnh thu nhỏ),
 bảng màu chữ (`theme.css`) và một bản nhạc; danh sách mẫu ở `packages/templates/src/catalog.ts`. Thêm mẫu là thêm
 một chủ đề, không thêm bố cục. Không có hình trang trí vẽ bằng CSS; gradient và lớp nền mờ chỉ để chữ dễ đọc.

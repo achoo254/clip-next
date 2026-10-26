@@ -866,8 +866,18 @@ export function isAllowedChoice(field: TextField, value: string): boolean {
 }
 
 /**
- * Field values a link may fill in (`/tao?t=la-so&animal=mui&line1=…`): for each field of the template, its query
- * parameter when valid — a choice among the field's ids, text within the field's limit after normalizeText, or
+ * The values a create-page link carries: `t` and picture ids in its query, free text (names, lines, readings) in its
+ * `#fragment`, which browsers never send to a server, so personal text stays out of every access log
+ * (`/tao?t=la-so&animal=mui#name=Lan&line1=…`). Both are read; the fragment wins when a key is in both.
+ */
+export function linkParams(search: string, hash: string): URLSearchParams {
+  const merged = new URLSearchParams(search);
+  for (const [key, value] of new URLSearchParams(hash.replace(/^#/, ''))) merged.set(key, value);
+  return merged;
+}
+
+/**
+ * Field values a link may fill in (see linkParams): for each field of the template, its link parameter when valid — a choice among the field's ids, text within the field's limit after normalizeText, or
  * empty for an optional field. Anything else (unknown parameters, ids, too long text, an empty required field) is
  * left out, so the person starts from the template's samples there.
  * Values stay plain text: the compositions only ever set them as textContent or map ids to bundled pictures.

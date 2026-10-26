@@ -16,15 +16,17 @@ import os from 'node:os';
 import path from 'node:path';
 import { accounts, createJob, mediaLayout, openPglite, renderJobs } from '@clip/db';
 import { eq } from 'drizzle-orm';
-import { fieldsFromQuery, isTemplateId, LAYOUT_IDS, templateById, TEMPLATES, validateInput, type TemplateId } from '@clip/templates';
+import { fieldsFromQuery, isTemplateId, linkParams, LAYOUT_IDS, templateById, TEMPLATES, validateInput, type TemplateId } from '@clip/templates';
 import { RENDER_TIMEOUT_MS } from '../config';
 import { probeVideo, renderVideo } from '../render';
 import { processNextJob } from '../worker-loop';
 
-/** `--url=<link>`: a create-page link (`https://clip…/tao?t=la-so&…`), or null. */
+/** `--url=<link>`: a create-page link (`https://clip…/tao?t=la-so&…#line1=…`), its query and fragment, or null. */
 function linkQuery(args: readonly string[]): URLSearchParams | null {
   const flag = args.find((a) => a.startsWith('--url='));
-  return flag ? new URL(flag.slice('--url='.length)).searchParams : null;
+  if (!flag) return null;
+  const url = new URL(flag.slice('--url='.length));
+  return linkParams(url.search, url.hash);
 }
 
 /** `--templates=a,b` picks the templates; `--url` the link's; default one per layout. */
