@@ -6,7 +6,7 @@
 #
 # setup    one-time and idempotent: system user `clip` (nginx joins its group to read videos), /var/www/clip and
 #          its media directories, the systemd units and the cleanup timer, /etc/clip. It writes no secret: the env
-#          file /etc/clip/production.env comes from the iCloud env folder "ENV production/clip/" (see
+#          file /etc/clip/production.env comes from the iCloud env folder "ENV production/clip-next/" (see
 #          docs/deployment-guide.md). The database and the nginx site are separate steps of that guide.
 # release  gates and build here, upload, `pnpm install --prod` for the server and worker on the server, switch
 #          app/ (the previous one kept as app.prev), install changed units and the nginx site (nginx -t first),

@@ -7,7 +7,7 @@ coverage/
 # Dev database (PGlite) and media (uploads, renders) of a local run.
 .data/
 
-# Environment files hold secrets; production env lives on iCloud "ENV production/clip/".
+# Environment files hold secrets; production env lives on iCloud "ENV production/clip-next/".
 .env
 .env.*
 !.env.example

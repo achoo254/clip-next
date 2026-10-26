@@ -14,7 +14,7 @@ không ghi IP, cổng SSH hay user máy chủ vào đây; dùng placeholder `<SE
 | Media | `/var/www/clip/media/{videos,inputs,tmp}` (user `clip`, nhóm `clip`; nginx thuộc nhóm `clip` để đọc video) |
 | Lưu giữ | `clip-media-cleanup.timer` mỗi giờ chạy `apps/worker/dist/cleanup.mjs`: xoá job (cả chữ người dùng) đúng ngày hết hạn cùng video và ảnh của nó, phiên hết hạn hoặc 7 ngày không dùng, video không còn job; rồi dọn phần thừa của upload/render |
 | Database | Postgres đang chạy trên `.65`, database `clip`, role `clip` (không dựng instance mới) |
-| Env | `/etc/clip/production.env` (640 `root:clip`), nguồn ở thư mục env iCloud `ENV production/clip/` |
+| Env | `/etc/clip/production.env` (640 `root:clip`), nguồn ở thư mục env iCloud `ENV production/clip-next/` |
 | nginx | `/etc/nginx/conf.d/clip.hoandat.com.conf` (từ `infra/nginx/`), `deploy.sh release` cài khi đổi, `nginx -t` trước khi reload |
 
 ## Env (`/etc/clip/production.env`)
