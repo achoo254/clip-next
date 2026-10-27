@@ -52,10 +52,16 @@ export const signOut = (): Promise<null> => call<null>('/auth/logout', { method:
 
 export const listJobs = (): Promise<JobList> => call<JobList>('/api/jobs');
 
-export function createJob(templateId: TemplateId, fields: Readonly<Record<string, string>>, photos: readonly File[]): Promise<{ job: Job }> {
+export function createJob(
+  templateId: TemplateId,
+  fields: Readonly<Record<string, string>>,
+  background: number,
+  photos: readonly File[],
+): Promise<{ job: Job }> {
   const form = new FormData();
   form.set('templateId', templateId);
   form.set('fields', JSON.stringify(fields));
+  form.set('background', String(background));
   for (const photo of photos) form.append('photos', photo, photo.name);
   return call<{ job: Job }>('/api/jobs', { method: 'POST', body: form });
 }

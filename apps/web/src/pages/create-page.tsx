@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import {
   fieldsFromQuery,
   linkParams,
+  parseBackground,
   isAllowedChoice,
   isTemplateId,
   normalizeText,
@@ -75,6 +76,10 @@ export function CreatePage(): ReactNode {
   const requested = params.get('t');
   const templateId: TemplateId = isTemplateId(requested) ? requested : 'chuc-mung';
   const spec = templateById(templateId);
+  // The chosen background rides in the address (`&bg=3`), so it survives the sign-in round trip; picking another
+  // template drops it (back to the first). Anything invalid there is the first too.
+  const background = parseBackground(spec, params.get('bg')) ?? 1;
+  const setBackground = (n: number): void => setParams(n === 1 ? { t: templateId } : { t: templateId, bg: String(n) }, { replace: true });
   // A link may fill the template in (`/tao?t=la-so&animal=mui#name=Lan&line1=…`, e.g. from the Tử Vi app; free text
   // rides in the #fragment, see linkParams): its valid values replace this layout's draft when the page opens.
   const link = useMemo(() => linkParams(location.search, location.hash), [location.search, location.hash]);
@@ -154,7 +159,7 @@ export function CreatePage(): ReactNode {
     }
     setBusy(true);
     try {
-      await createJob(templateId, check.fields, usable.map((p) => p.file));
+      await createJob(templateId, check.fields, background, usable.map((p) => p.file));
       setMessage({ kind: 'ok', text: t('create.queued') });
     } catch (error) {
       setMessage({ kind: 'error', text: errorMessage(error, t, locale, spec.photos.min) });
@@ -266,7 +271,7 @@ export function CreatePage(): ReactNode {
 
         <section className="preview-column" aria-label={t('create.preview')} data-id="preview-column">
           <h2 className="label">{t('create.preview')}</h2>
-          <TemplatePreview templateId={templateId} fields={previewFields} photoUrls={photoUrls} />
+          <TemplatePreview templateId={templateId} fields={previewFields} photoUrls={photoUrls} background={background} onBackgroundChange={setBackground} />
         </section>
       </div>
     </div>

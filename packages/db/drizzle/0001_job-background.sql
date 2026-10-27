@@ -1,0 +1,2 @@
+ALTER TABLE "render_jobs" ADD COLUMN "background" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE "render_jobs" ADD CONSTRAINT "render_jobs_background_check" CHECK ("render_jobs"."background" >= 1);

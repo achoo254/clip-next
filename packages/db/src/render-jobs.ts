@@ -15,6 +15,8 @@ export interface NewJob {
   readonly accountId: string;
   readonly templateId: string;
   readonly fields: Record<string, string>;
+  /** Chosen background (1-based, already validated); the first when omitted. */
+  readonly background?: number;
   readonly photoCount: number;
 }
 

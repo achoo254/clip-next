@@ -1,7 +1,9 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  BACKGROUND_VARIANTS,
+  backgroundFile,
   composeTemplateHtml,
   compositionVariables,
   CUC_CHOICES,
@@ -13,6 +15,7 @@ import {
   MAX_DURATION_SECONDS,
   normalizeText,
   OCCASIONS,
+  parseBackground,
   STAR_CHOICES,
   TEMPLATE_IDS,
   TEMPLATES,
@@ -50,6 +53,28 @@ describe('validateInput', () => {
     expect(decomposed.length).toBeGreaterThan(9);
     expect(normalizeText(decomposed)).toBe('Chúc mừng');
     expect(normalizeText(' a\n\tb\u0000 ')).toBe('a b');
+  });
+});
+
+describe('parseBackground', () => {
+  const birthday = templateById('chuc-mung');
+
+  it('takes the first background when the job names none (old clients and jobs)', () => {
+    for (const raw of [undefined, null, '']) expect(parseBackground(birthday, raw)).toBe(1);
+  });
+
+  it('accepts every index of the theme, as a number or as digits', () => {
+    for (let n = 1; n <= birthday.backgrounds; n += 1) {
+      expect(parseBackground(birthday, n)).toBe(n);
+      expect(parseBackground(birthday, String(n))).toBe(n);
+    }
+  });
+
+  it('refuses anything else', () => {
+    for (const raw of [0, -1, 1.5, BACKGROUND_VARIANTS + 1, '0', '7', '01x', ' 2', '2.0', '-1', '1e0', 'bg-2.webp', '../bg', NaN, Infinity, true, {}, [2]]) {
+      expect(parseBackground(birthday, raw), String(raw)).toBeNull();
+    }
+    expect(parseBackground(templateById('la-so'), 2)).toBeNull();
   });
 });
 
@@ -174,8 +199,53 @@ describe('templates', () => {
     });
   }
 
-  it('maps photos to the photo variables in order', () => {
+  it('maps photos to the photo variables in order, and the background to its index', () => {
     const vars = compositionVariables(templateById('chuc-mung'), { line1: 'a' }, ['photos/photo-1.jpg']);
-    expect(vars).toEqual({ line1: 'a', line2: '', line3: '', photo1: 'photos/photo-1.jpg', photo2: '', photo3: '' });
+    expect(vars).toEqual({ background: '1', line1: 'a', line2: '', line3: '', photo1: 'photos/photo-1.jpg', photo2: '', photo3: '' });
+    expect(compositionVariables(templateById('chuc-mung'), {}, [], 4).background).toBe('4');
   });
+});
+
+/** Width and height of a WebP file (lossy VP8, lossless VP8L or extended VP8X), from its header. */
+function webpSize(file: string): { width: number; height: number } {
+  const b = readFileSync(file);
+  if (b.toString('ascii', 0, 4) !== 'RIFF' || b.toString('ascii', 8, 12) !== 'WEBP') throw new Error(`${file} is not a WebP`);
+  const chunk = b.toString('ascii', 12, 16);
+  if (chunk === 'VP8X') return { width: 1 + b.readUIntLE(24, 3), height: 1 + b.readUIntLE(27, 3) };
+  if (chunk === 'VP8 ') return { width: b.readUInt16LE(26) & 0x3fff, height: b.readUInt16LE(28) & 0x3fff };
+  if (chunk === 'VP8L') {
+    const bits = b.readUInt32LE(21);
+    return { width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
+  }
+  throw new Error(`${file}: unknown WebP chunk ${chunk}`);
+}
+
+/** Largest background file accepted: the existing ones are 70–550 KB at cwebp -q 88. */
+const MAX_BACKGROUND_BYTES = 600 * 1024;
+
+describe('background variants', () => {
+  it('every theme but the birth chart offers the full set', () => {
+    for (const spec of TEMPLATES) expect(spec.backgrounds, spec.id).toBe(spec.id === 'la-so' ? 1 : BACKGROUND_VARIANTS);
+  });
+
+  for (const spec of TEMPLATES) {
+    it(`${spec.id}: has exactly its ${spec.backgrounds} background(s), each a vertical WebP of a sane size`, () => {
+      const dir = path.join(PROJECT_DIR, 'themes', spec.theme);
+      const expected = Array.from({ length: spec.backgrounds }, (_, i) => backgroundFile(i + 1));
+      const onDisk = readdirSync(dir).filter((f) => /^bg(-\d+)?\.webp$/.test(f));
+      expect(onDisk.sort()).toEqual([...expected].sort());
+      const first = webpSize(path.join(dir, 'bg.webp'));
+      for (const file of expected) {
+        const size = webpSize(path.join(dir, file));
+        expect(size.height, file).toBeGreaterThan(size.width);
+        // Variants are drawn at 9:16; the original may be 2:3 (the first twelve themes). Both cover the video.
+        if (file !== 'bg.webp') expect(size, file).toEqual({ width: 864, height: 1536 });
+        else expect(first.width).toBeGreaterThanOrEqual(864);
+        const bytes = statSync(path.join(dir, file)).size;
+        expect(bytes, file).toBeGreaterThan(20 * 1024);
+        expect(bytes, file).toBeLessThanOrEqual(MAX_BACKGROUND_BYTES);
+      }
+    });
+  }
+
 });

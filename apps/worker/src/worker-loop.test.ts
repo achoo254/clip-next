@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { RenderError, type RenderInput } from './render';
 import { processNextJob, type Renderer } from './worker-loop';
+import { templateById } from '@clip/templates';
 
 let handle: DbHandle;
 let media: MediaLayout;
@@ -23,7 +24,7 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-async function queue(templateId: string, fields: Record<string, string>, photos: number, at = new Date()): Promise<string> {
+async function queue(templateId: string, fields: Record<string, string>, photos: number, at = new Date(), background?: number): Promise<string> {
   const [account] = await handle.db.insert(accounts).values({ sub: randomUUID(), createdAt: at }).returning();
   if (!account) throw new Error('no account');
   const id = randomUUID();
@@ -31,7 +32,7 @@ async function queue(templateId: string, fields: Record<string, string>, photos:
     await mkdir(media.inputDir(id), { recursive: true });
     await writeFile(media.photo(id, i), `photo ${i}`);
   }
-  const created = await createJob(handle.db, { id, accountId: account.id, templateId, fields, photoCount: photos }, at);
+  const created = await createJob(handle.db, { id, accountId: account.id, templateId, fields, background, photoCount: photos }, at);
   if (!created.ok) throw new Error('refused');
   return id;
 }
@@ -56,13 +57,27 @@ describe('worker', () => {
     const id = await queue('chuc-mung', { line1: 'a', line2: 'b', line3: 'c' }, 2);
     const seen: RenderInput[] = [];
     expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('done');
-    expect(seen[0]?.variables).toEqual({ line1: 'a', line2: 'b', line3: 'c', photo1: 'photos/photo-1.jpg', photo2: 'photos/photo-2.jpg', photo3: '' });
+    expect(seen[0]?.variables).toEqual({ background: '1', line1: 'a', line2: 'b', line3: 'c', photo1: 'photos/photo-1.jpg', photo2: 'photos/photo-2.jpg', photo3: '' });
     expect(seen[0]?.photos).toEqual([media.photo(id, 0), media.photo(id, 1)]);
     expect(seen[0]?.output).toBe(media.video(id));
     expect(await job(id)).toMatchObject({ status: 'done', outputBytes: 3, durationSeconds: 12, renderMs: 5 });
     await expect(stat(media.inputDir(id))).rejects.toThrow();
     expect(await readFile(media.video(id), 'utf8')).toBe('mp4');
     expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('idle');
+  });
+
+  it('passes the chosen background to the composition, and fails a job whose background the template lacks', async () => {
+    const last = templateById('trich-dan').backgrounds;
+    const chosen = await queue('trich-dan', { quote: 'q', author: '' }, 0, new Date(), last);
+    const seen: RenderInput[] = [];
+    expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('done');
+    expect(seen[0]?.variables).toMatchObject({ background: String(last), quote: 'q' });
+    expect(await job(chosen)).toMatchObject({ background: last });
+
+    const missing = await queue('la-so', { name: '', line1: 'a', line2: 'b', reading: 'r', animal: 'mui', star: '', cuc: 'moc-tam' }, 0, new Date(), 2);
+    expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('failed');
+    expect(await job(missing)).toMatchObject({ status: 'failed', error: 'render-failed' });
+    expect(seen).toHaveLength(1);
   });
 
   it('marks a job failed with the render error code', async () => {

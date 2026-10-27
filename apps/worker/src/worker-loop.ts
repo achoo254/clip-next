@@ -1,7 +1,7 @@
 import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { claimNextJob, failStuckJobs, markJobDone, markJobFailed, requeueJob, type Db, type MediaLayout, type RenderJob } from '@clip/db';
-import { compositionVariables, isTemplateId, templateById } from '@clip/templates';
+import { compositionVariables, isTemplateId, parseBackground, templateById } from '@clip/templates';
 import { RenderError, type RenderInput, type RenderResult } from './render';
 
 /** Renders one job's video; `renderVideo` in production, injectable for tests of the queue. */
@@ -29,14 +29,18 @@ export interface WorkerDeps {
 
 export type JobOutcome = 'idle' | 'done' | 'failed' | 'requeued';
 
-/** The render input of a job: its fields and photos as composition variables, photos copied as `photos/…`. */
+/** The render input of a job: its fields, background and photos as composition variables, photos copied as `photos/…`. */
 export function renderInputFor(job: RenderJob, media: MediaLayout): RenderInput {
   if (!isTemplateId(job.templateId)) throw new RenderError('render-failed', `unknown template ${job.templateId}`);
+  const spec = templateById(job.templateId);
+  const background = parseBackground(spec, job.background);
+  if (background === null) throw new RenderError('render-failed', `background ${job.background} not in ${job.templateId}`);
   const photos = Array.from({ length: job.photoCount }, (_, index) => media.photo(job.id, index));
   const variables = compositionVariables(
-    templateById(job.templateId),
+    spec,
     job.fields,
     photos.map((file) => `photos/${path.basename(file)}`),
+    background,
   );
   return { templateId: job.templateId, variables, photos, workDir: path.join(media.tmp, `render-${job.id}`), output: media.video(job.id) };
 }

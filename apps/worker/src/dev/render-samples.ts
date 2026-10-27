@@ -1,7 +1,7 @@
 /**
- * `pnpm --filter @clip/worker render:samples [--templates=a,b | --url=<link>] [photo ...]`: one real render per
- * template (default: the first template of each layout; with `--url`, the template of a `/tao?t=…` link, filled in
- * with the values that link gives the create page) through the worker's own
+ * `pnpm --filter @clip/worker render:samples [--templates=a,b | --url=<link>] [--background=n] [photo ...]`: one real
+ * render per template (default: the first template of each layout; with `--url`, the template of a `/tao?t=…` link,
+ * filled in with the values that link gives the create page), on background n (default 1), through the worker's own
  * path (queue → claim → hyperframes → ffmpeg → ffprobe check), on a throw-away PGlite database and media directory.
  * Photos given on the command line are cleaned the way the server cleans uploads (ffmpeg, ≤1080 px, no metadata);
  * without any, ffmpeg's test pattern stands in. Prints each render's time and the probed output, and keeps the
@@ -16,7 +16,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { accounts, createJob, mediaLayout, openPglite, renderJobs } from '@clip/db';
 import { eq } from 'drizzle-orm';
-import { fieldsFromQuery, isTemplateId, linkParams, LAYOUT_IDS, templateById, TEMPLATES, validateInput, type TemplateId } from '@clip/templates';
+import { fieldsFromQuery, isTemplateId, linkParams, LAYOUT_IDS, parseBackground, templateById, TEMPLATES, validateInput, type TemplateId } from '@clip/templates';
 import { RENDER_TIMEOUT_MS } from '../config';
 import { probeVideo, renderVideo } from '../render';
 import { processNextJob } from '../worker-loop';
@@ -68,6 +68,7 @@ await mkdir(media.tmp, { recursive: true });
 const sources = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const templates = chosenTemplates(process.argv.slice(2));
 const link = linkQuery(process.argv.slice(2));
+const backgroundFlag = process.argv.find((a) => a.startsWith('--background='))?.slice('--background='.length);
 const handle = await openPglite();
 const log = { info: (m: string) => console.log(m), warn: (m: string) => console.warn(m) };
 try {
@@ -84,7 +85,9 @@ try {
       const input = source ? ['-i', source] : ['-f', 'lavfi', '-i', `testsrc2=s=${1600 - i * 300}x1200`];
       ffmpeg([...input, '-frames:v', '1', '-vf', scale, '-map_metadata', '-1', '-q:v', '3', '-f', 'image2', media.photo(id, i)]);
     }
-    const created = await createJob(handle.db, { id, accountId: account.id, templateId, fields: sampleFields(templateId, link), photoCount: photos }, new Date());
+    const background = parseBackground(spec, backgroundFlag);
+    if (background === null) throw new Error(`${templateId} has no background ${String(backgroundFlag)}`);
+    const created = await createJob(handle.db, { id, accountId: account.id, templateId, fields: sampleFields(templateId, link), background, photoCount: photos }, new Date());
     if (!created.ok) throw new Error(`queue refused: ${created.reason}`);
     const outcome = await processNextJob({
       db: handle.db,
@@ -96,7 +99,7 @@ try {
     const [row] = await handle.db.select().from(renderJobs).where(eq(renderJobs.id, id));
     const probed = outcome === 'done' ? probeVideo(media.video(id)) : null;
     console.log(
-      JSON.stringify({ templateId, fields: sampleFields(templateId, link), outcome, error: row?.error ?? null, renderMs: row?.renderMs ?? null, photos, file: media.video(id), probed }),
+      JSON.stringify({ templateId, background, fields: sampleFields(templateId, link), outcome, error: row?.error ?? null, renderMs: row?.renderMs ?? null, photos, file: media.video(id), probed }),
     );
   }
 } finally {

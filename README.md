@@ -21,7 +21,9 @@ tinh, cục chọn theo id trong bộ hình của chủ đề + 3 dòng chữ v�
 `/tao?t=la-so&animal=…&star=…&cuc=…#name=…&line1=…&line2=…&reading=…`: id trong query, chữ tự do (tên, các dòng) trong
 `#fragment` để không bao giờ tới log máy chủ; mọi giá trị được kiểm theo danh sách cho phép và giới hạn ô, sai thì bỏ
 qua, rồi query và fragment được xoá khỏi thanh địa chỉ). Mỗi chủ đề
-(`project/themes/<chủ-đề>/`) là một bộ ảnh vẽ bằng AI (nền dọc, khung ảnh, sticker nền trong suốt, ảnh thu nhỏ),
+(`project/themes/<chủ-đề>/`) là một bộ ảnh vẽ bằng AI (nền dọc `bg.webp`, khung ảnh, sticker nền trong suốt, ảnh thu
+nhỏ; code đã sẵn cho 6 nền mỗi mẫu `bg-2..6.webp` để người dùng chọn, bật bằng `BACKGROUND_VARIANTS` khi các nền đó vẽ
+xong),
 bảng màu chữ (`theme.css`) và một bản nhạc; danh sách mẫu ở `packages/templates/src/catalog.ts`. Thêm mẫu là thêm
 một chủ đề, không thêm bố cục. Không có hình trang trí vẽ bằng CSS; gradient và lớp nền mờ chỉ để chữ dễ đọc.
 Chuyển động viết bằng CSS animation (runtime của hyperframes tua được), chữ dùng font Be Vietnam Pro tự host, nhạc
@@ -78,6 +80,6 @@ Xem [`docs/deployment-guide.md`](docs/deployment-guide.md).
 Mã nguồn: MIT ([`LICENSE`](LICENSE)). Font, nhạc, hình vẽ của các mẫu và biểu tượng app **không** thuộc giấy
 phép MIT; xem [`assets/CREDITS.md`](assets/CREDITS.md). Biểu tượng app và hình vẽ của 12 mẫu đầu: AI-generated
 with OpenAI gpt-image for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0). Hình vẽ của các mẫu
-thêm sau: AI-generated with open models (Qwen-Image, Z-Image-Turbo; Apache-2.0) for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0).
+thêm sau và các nền biến thể (`bg-2..6.webp`) của mọi mẫu: AI-generated with open models (Qwen-Image, Z-Image-Turbo; Apache-2.0) for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0).
 Mẫu Lá số tử vi (`themes/la-so/`) dùng lại hình của Tử Vi (nền, huy chương, con giáp, chính tinh: OpenAI gpt-image;
 huy hiệu tứ hóa và cục: FLUX.2 klein 4B), cùng dòng giấy phép "owned by hoandat, all rights reserved (not CC0)".

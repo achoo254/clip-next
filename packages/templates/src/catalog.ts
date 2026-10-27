@@ -216,6 +216,8 @@ export interface TemplateSpec {
   readonly occasions: readonly Occasion[];
   readonly name: Localized;
   readonly description: Localized;
+  /** Background pictures of the theme the person may choose from (see backgroundFile); 1 means no choice. */
+  readonly backgrounds: number;
   readonly durationSeconds: number;
   readonly photos: { readonly min: number; readonly max: number };
   readonly fields: readonly TextField[];
@@ -231,7 +233,16 @@ interface ThemeEntry {
   readonly description: Localized;
   /** Sample text per field id, shown as placeholder and in the preview until the person types. */
   readonly samples: Readonly<Record<string, Localized>>;
+  /** Background pictures of the theme when not BACKGROUND_VARIANTS. */
+  readonly backgrounds?: number;
 }
+
+/**
+ * Background pictures per theme: the original and variants drawn for the same occasion and palette, with the same
+ * empty zones for the text and the photo frame, so the person's video need not look like everyone else's. 1 until the
+ * variants (bg-2.webp … bg-6.webp of every theme) are drawn; then 6, and the catalog test checks the files.
+ */
+export const BACKGROUND_VARIANTS = 1;
 
 const ENTRIES: readonly ThemeEntry[] = [
   {
@@ -776,6 +787,8 @@ const ENTRIES: readonly ThemeEntry[] = [
     theme: 'la-so',
     music: 'chillin-poupi',
     occasions: ['share'],
+    // The Tử Vi app's own background: the card is about the chart, not the scenery.
+    backgrounds: 1,
     name: { vi: 'Lá số tử vi', en: 'Tử Vi birth chart' },
     description: {
       vi: 'Con giáp, chính tinh ở Mệnh và cục của lá số, kèm một câu luận giải. Mở từ lá số trên tuvi.hoandat.com thì mọi ô được điền sẵn.',
@@ -806,6 +819,7 @@ export const TEMPLATES: readonly TemplateSpec[] = ENTRIES.map((entry) => {
     occasions: entry.occasions,
     name: entry.name,
     description: entry.description,
+    backgrounds: entry.backgrounds ?? BACKGROUND_VARIANTS,
     durationSeconds: layout.durationSeconds,
     photos: layout.photos,
     fields: layout.fields.map((f) => ({ ...f, placeholder: entry.samples[f.id] ?? { vi: '', en: '' } })),
@@ -817,6 +831,27 @@ export const MAX_DURATION_SECONDS = 20;
 /** Photos per video, and their composition variable ids in order. */
 export const MAX_PHOTOS = 3;
 export const PHOTO_VARIABLES = ['photo1', 'photo2', 'photo3'] as const;
+
+/**
+ * File name, in the theme's folder, of background `n` (1-based): `bg.webp` for the first, `bg-<n>.webp` for the
+ * others. The compositions choose it from their `background` variable the same way (scripts/common.js).
+ */
+export function backgroundFile(n: number): string {
+  return n === 1 ? 'bg.webp' : `bg-${n}.webp`;
+}
+
+/**
+ * The background a job asked for: absent (old clients, old jobs) is the first; otherwise a whole number from 1 to
+ * the template's count, as a number or as its decimal digits (a multipart form field). null when invalid.
+ */
+export function parseBackground(spec: TemplateSpec, raw: unknown): number | null {
+  if (raw === undefined || raw === null || raw === '') return 1;
+  let n: number;
+  if (typeof raw === 'number') n = raw;
+  else if (typeof raw === 'string' && /^[0-9]{1,3}$/.test(raw)) n = Number(raw);
+  else return null;
+  return Number.isInteger(n) && n >= 1 && n <= spec.backgrounds ? n : null;
+}
 
 /** Where a template's thumbnail is served (a small copy of its background, under the web app's /tpl/). */
 export function thumbnailPath(spec: TemplateSpec): string {
@@ -925,11 +960,16 @@ export function validateInput(templateId: unknown, fields: unknown, photoCount: 
 }
 
 /**
- * The composition variables of one render: every text field, then one variable per photo slot of the template
- * (the photo's URL or path, empty when there is none).
+ * The composition variables of one render: the background (its 1-based index, as text), every text field, then one
+ * variable per photo slot of the template (the photo's URL or path, empty when there is none).
  */
-export function compositionVariables(spec: TemplateSpec, fields: Readonly<Record<string, string>>, photos: readonly string[]): Record<string, string> {
-  const variables: Record<string, string> = {};
+export function compositionVariables(
+  spec: TemplateSpec,
+  fields: Readonly<Record<string, string>>,
+  photos: readonly string[],
+  background = 1,
+): Record<string, string> {
+  const variables: Record<string, string> = { background: String(background) };
   for (const field of spec.fields) variables[field.id] = fields[field.id] ?? '';
   if (spec.photos.max > 0) {
     PHOTO_VARIABLES.forEach((id, index) => {

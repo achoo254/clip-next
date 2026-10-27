@@ -56,6 +56,19 @@
       .join(", ");
   }
 
+  /**
+   * Shows the background the person chose: variable `background` is its 1-based index among the theme's pictures
+   * (bg.webp, bg-2.webp, …; the catalog validates it). Anything but a plain index keeps the first one.
+   */
+  function useBackground(vars) {
+    var bg = document.getElementById("bg");
+    var n = text(vars, "background");
+    if (!bg || !/^[1-9][0-9]?$/.test(n) || n === "1") return;
+    bg.setAttribute("src", bg.getAttribute("src").replace(/bg\.webp$/, "bg-" + n + ".webp"));
+  }
+
+  useBackground(variables());
+
   window.ClipTemplate = {
     variables: variables,
     text: text,

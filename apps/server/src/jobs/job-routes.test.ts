@@ -5,6 +5,7 @@ import { accounts, claimNextJob, createJob, DAILY_RENDER_LIMIT, markJobDone, ren
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ORIGIN, startTestApp, type TestApp } from '../test-support';
 import { CREATE_LIMIT, MAX_QUEUED_JOBS } from './job-routes';
+import { templateById } from '@clip/templates';
 
 /** A real JPEG of `width`×`height` from ffmpeg (`source`: an ffmpeg lavfi source), with an EXIF block (camera make "SECRETCAM") spliced in. */
 function jpegWithExif(width: number, height: number, source = 'testsrc2'): Buffer {
@@ -151,6 +152,29 @@ describe('POST /api/jobs', () => {
       .field('fields', JSON.stringify({ quote: '' }));
     expect(missing.status).toBe(400);
     expect(missing.body).toEqual({ error: 'missing-field', field: 'quote' });
+  });
+
+  it('stores the chosen background, the first when none is sent, and refuses one the template lacks', async () => {
+    const post = (cookie: string, templateId: string, fields: object, background?: string) => {
+      const req = app.http().post('/api/jobs').set('Cookie', cookie).set('Origin', ORIGIN).field('templateId', templateId).field('fields', JSON.stringify(fields));
+      return background === undefined ? req : req.field('background', background);
+    };
+    const first = await app.signIn('sub-1');
+    const last = templateById('trich-dan').backgrounds;
+    for (const bad of ['0', String(last + 1), '2.5', 'bg-2.webp', '-1']) {
+      const res = await post(first.cookie, 'trich-dan', QUOTE, bad);
+      expect(res.status, bad).toBe(400);
+      expect(res.body, bad).toEqual({ error: 'invalid-background' });
+    }
+    const chart = { line1: 'a', line2: 'b', reading: 'r', animal: 'mui', cuc: 'moc-tam' };
+    expect((await post(first.cookie, 'la-so', chart, '2')).body).toEqual({ error: 'invalid-background' });
+    expect(await app.handle.db.select().from(renderJobs)).toEqual([]);
+
+    expect((await post(first.cookie, 'trich-dan', QUOTE, String(last))).status).toBe(201);
+    const second = await app.signIn('sub-2');
+    expect((await post(second.cookie, 'trich-dan', QUOTE)).status).toBe(201);
+    const stored = await app.handle.db.select({ background: renderJobs.background }).from(renderJobs);
+    expect(stored.map((j) => j.background).sort()).toEqual([1, last]);
   });
 
   it('allows one waiting job per account (429 job-in-progress)', async () => {

@@ -538,7 +538,7 @@ button {
     top: calc(var(--topbar-h) + var(--space-4));
   }
   .preview-frame {
-    width: min(100%, calc((100svh - var(--topbar-h) - 2 * var(--space-4) - 7rem) * 9 / 16));
+    width: min(100%, calc((100svh - var(--topbar-h) - 2 * var(--space-4) - 10rem) * 9 / 16));
     justify-self: center;
   }
 }
@@ -554,6 +554,22 @@ button {
   display: block;
   width: 100%;
   height: 100%;
+}
+.bg-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+.bg-step {
+  min-width: 44px;
+  font-size: 22px;
+  line-height: 1;
+}
+.bg-count {
+  min-width: 7.5em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* my videos */

@@ -104,8 +104,14 @@ không bị mất video vì một lần deploy.
   (Tết 12 giây: 24 giây; Chuyến đi 18 giây: 36 giây; Cảm ơn 10 giây: 19 giây). Không có libx264 thì đường WebM chậm
   khoảng 5 lần (xem mục Env). Đo lại trên `.65` sau khi cài ffmpeg tĩnh.
 - **Thêm mẫu:** một thư mục chủ đề mới trong `packages/templates/project/themes/<chủ-đề>/` (`bg.webp` dọc 2:3 hoặc
-  9:16, ví dụ 1024×1536 hay 864×1536, `thumb.webp` 240×360, `sticker-1..3.webp`, `frame.webp` với bố cục chúc mừng, `theme.css` với màu và khoảng hở của khung)
+  9:16, ví dụ 1024×1536 hay 864×1536, và, khi `BACKGROUND_VARIANTS` là 6, 5 nền biến thể `bg-2..6.webp` 864×1536 cùng dịp, cùng bảng màu, chừa cùng
+  vùng trống cho chữ và khung ảnh — hoặc `backgrounds: 1` trong catalog nếu chỉ có một; `thumb.webp` 240×360, `sticker-1..3.webp`, `frame.webp` với bố cục chúc mừng, `theme.css` với màu và khoảng hở của khung)
   và một mục trong `ENTRIES` của `packages/templates/src/catalog.ts`; test kiểm đủ tệp, `pnpm check:templates` kiểm
-  composition. Không đổi id mẫu đã có: job trong DB tham chiếu id.
+  composition (`pnpm check:templates --all-backgrounds` kiểm cả tương phản chữ trên từng nền). Không đổi id mẫu đã có: job trong DB
+  tham chiếu id.
+- **Nền biến thể:** người dùng chọn nền bằng nút "Đổi nền" dưới khung xem trước (ảnh chỉ tải khi được chọn; lưới
+  chọn mẫu không nặng thêm); job lưu số nền ở cột `render_jobs.background` (migration `0001_job-background`, mặc
+  định 1 nên job cũ và bản phát hành cũ vẫn chạy), server từ chối số ngoài khoảng của mẫu (400
+  `invalid-background`), worker truyền vào biến `background` của composition.
 - **Nâng hyperframes:** đổi phiên bản ở `apps/worker/package.json` và `apps/web/package.json` (player, core) cùng
   lúc, chạy `pnpm check:templates` và `pnpm --filter @clip/worker render:samples`, đo lại RAM trên `.65`.

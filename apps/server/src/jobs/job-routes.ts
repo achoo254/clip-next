@@ -15,7 +15,7 @@ import {
   type MediaLayout,
   type RenderJob,
 } from '@clip/db';
-import { MAX_PHOTOS, validateInput } from '@clip/templates';
+import { MAX_PHOTOS, parseBackground, templateById, validateInput } from '@clip/templates';
 import express, { type RequestHandler, type Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import multer from 'multer';
@@ -93,7 +93,7 @@ function uploadError(error: unknown): unknown {
   return new HttpError(400, 'invalid-input');
 }
 
-/** The multipart body: up to three photos (in memory, 5 MB each) and the two text fields. */
+/** The multipart body: up to three photos (in memory, 5 MB each) and the text fields (template, fields, background). */
 const readUpload: RequestHandler = (req, res, next) => {
   upload.array('photos', MAX_PHOTOS)(req, res, (error: unknown) => (error ? next(uploadError(error)) : next()));
 };
@@ -137,17 +137,20 @@ export function jobRoutes(config: ServerConfig, db: Db, media: MediaLayout, opti
   router.post('/api/jobs', signedIn, perAccount, allowed, readUpload, async (req, res) => {
     const accountId = accountOf(res.locals);
     const body: unknown = req.body;
-    const { templateId, fields } = typeof body === 'object' && body !== null ? (body as { templateId?: unknown; fields?: unknown }) : {};
+    const { templateId, fields, background } =
+      typeof body === 'object' && body !== null ? (body as { templateId?: unknown; fields?: unknown; background?: unknown }) : {};
     const files = Array.isArray(req.files) ? req.files : [];
     const input = validateInput(templateId, parseFields(fields), files.length);
     if (!input.ok) throw new HttpError(400, input.error, input.field ? { field: input.field } : {});
+    const chosenBackground = parseBackground(templateById(input.templateId), background);
+    if (chosenBackground === null) throw new HttpError(400, 'invalid-background');
     if (files.some((file) => !sniffPhotoType(file.buffer))) throw new HttpError(400, 'photo-type');
 
     const jobId = randomUUID();
     try {
       for (const [index, file] of files.entries()) await cleanPhoto(file.buffer, media.tmp, media.photo(jobId, index));
       const now = new Date();
-      const created = await createJob(db, { id: jobId, accountId, templateId: input.templateId, fields: { ...input.fields }, photoCount: files.length }, now);
+      const created = await createJob(db, { id: jobId, accountId, templateId: input.templateId, fields: { ...input.fields }, background: chosenBackground, photoCount: files.length }, now);
       if (!created.ok) throw refusal(created);
       res.status(201).json({ job: jobView(created.job, now) });
     } catch (error) {
