@@ -129,5 +129,10 @@ export function clipTemplates(): Plugin {
   });
 }
 
+/** The app's public origin (https://clip.<domain>), from the brand. */
+export function clipOrigin(): string {
+  return primaryOrigin(loadBrandConfig(REPO_ROOT));
+}
+
 /** Repo root as a file path (for fs.allow). */
 export const REPO_ROOT_PATH = fileURLToPath(REPO_ROOT);

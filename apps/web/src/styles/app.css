@@ -416,6 +416,23 @@ button {
   border: 1px solid var(--c-border);
   background: var(--c-surface-subtle);
 }
+.template-landing {
+  display: grid;
+  grid-template-columns: minmax(120px, 240px) 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+.template-landing-thumb {
+  max-width: 240px;
+}
+@media (max-width: 560px) {
+  .template-landing {
+    grid-template-columns: 1fr;
+  }
+  .template-landing-thumb {
+    max-width: 180px;
+  }
+}
 .steps {
   margin: 0;
   padding-left: var(--space-5);

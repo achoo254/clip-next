@@ -96,6 +96,9 @@ export function Layout({ children }: { readonly children: ReactNode }): ReactNod
           <a className="foot-link" href={HOME_URL} data-id="foot-home">
             {t('foot.ecosystem', { domain: brand.primaryTenant.domain })}
           </a>
+          <Link className="foot-link" to="/mau" data-id="foot-templates">
+            {t('foot.templates')}
+          </Link>
           <Link className="foot-link" to="/privacy" data-id="foot-privacy">
             {t('foot.privacy')}
           </Link>

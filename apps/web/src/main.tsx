@@ -6,13 +6,15 @@ import './styles/tokens.css';
 import './styles/app.css';
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Link, Route, Routes } from 'react-router';
+import { BrowserRouter, Route, Routes } from 'react-router';
 import { AccountProvider, useAccount } from './account';
-import { I18nProvider, useI18n } from './i18n';
+import { I18nProvider } from './i18n';
 import { Layout } from './layout';
 import { CreatePage } from './pages/create-page';
 import { IntroPage } from './pages/intro-page';
 import { CreditsPage, PrivacyPage, TermsPage } from './pages/legal-pages';
+import { NotFound } from './pages/not-found';
+import { TemplatePage, TemplatesIndexPage } from './pages/template-pages';
 import { VideosPage } from './pages/videos-page';
 
 /** Signed out: the intro; signed in: straight to making a video. */
@@ -20,16 +22,6 @@ function Home(): ReactNode {
   const { me } = useAccount();
   if (!me) return null;
   return me.signedIn ? <CreatePage /> : <IntroPage />;
-}
-
-function NotFound(): ReactNode {
-  const { t } = useI18n();
-  return (
-    <div className="stack">
-      <h1>{t('notFound.title')}</h1>
-      <Link to="/">{t('notFound.back')}</Link>
-    </div>
-  );
 }
 
 const container = document.getElementById('root');
@@ -44,6 +36,8 @@ createRoot(container).render(
               <Route path="/" element={<Home />} />
               <Route path="/tao" element={<CreatePage />} />
               <Route path="/video" element={<VideosPage />} />
+              <Route path="/mau" element={<TemplatesIndexPage />} />
+              <Route path="/mau/:id" element={<TemplatePage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/credits" element={<CreditsPage />} />
