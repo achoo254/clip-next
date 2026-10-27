@@ -58,13 +58,16 @@
 
   /**
    * Shows the background the person chose: variable `background` is its 1-based index among the theme's pictures
-   * (bg.webp, bg-2.webp, …; the catalog validates it). Anything but a plain index keeps the first one.
+   * (bg.webp, bg-2.webp, …; the catalog validates it). Anything but a plain index keeps the first one. The blurred
+   * backdrop of the 4:5 and square formats (#backdrop) follows it.
    */
   function useBackground(vars) {
-    var bg = document.getElementById("bg");
     var n = text(vars, "background");
-    if (!bg || !/^[1-9][0-9]?$/.test(n) || n === "1") return;
-    bg.setAttribute("src", bg.getAttribute("src").replace(/bg\.webp$/, "bg-" + n + ".webp"));
+    if (!/^[1-9][0-9]?$/.test(n) || n === "1") return;
+    ["bg", "backdrop"].forEach(function (id) {
+      var img = document.getElementById(id);
+      if (img) img.setAttribute("src", img.getAttribute("src").replace(/bg\.webp$/, "bg-" + n + ".webp"));
+    });
   }
 
   useBackground(variables());

@@ -538,17 +538,26 @@ button {
     top: calc(var(--topbar-h) + var(--space-4));
   }
   .preview-frame {
-    width: min(100%, calc((100svh - var(--topbar-h) - 2 * var(--space-4) - 10rem) * 9 / 16));
+    width: min(100%, calc((100svh - var(--topbar-h) - 2 * var(--space-4) - 10rem) * var(--preview-ratio)));
     justify-self: center;
   }
 }
 .preview-frame {
+  --preview-ratio: 0.5625;
   aspect-ratio: 9 / 16;
   width: 100%;
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--c-text);
   box-shadow: var(--shadow-md);
+}
+.preview-frame[data-format='4:5'] {
+  --preview-ratio: 0.8;
+  aspect-ratio: 4 / 5;
+}
+.preview-frame[data-format='1:1'] {
+  --preview-ratio: 1;
+  aspect-ratio: 1 / 1;
 }
 .preview-frame hyperframes-player {
   display: block;

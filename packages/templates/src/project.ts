@@ -8,7 +8,7 @@
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { composeTemplateHtml, templateById, type TemplateId } from './catalog';
+import { composeTemplateHtml, templateById, type TemplateId, type VideoFormat } from './catalog';
 
 /**
  * packages/templates/project: layouts, scripts, themes and shared assets. Found through the package's own name, so
@@ -16,12 +16,12 @@ import { composeTemplateHtml, templateById, type TemplateId } from './catalog';
  */
 export const PROJECT_DIR = path.join(path.dirname(createRequire(import.meta.url).resolve('@clip/templates/package.json')), 'project');
 
-/** Writes the hyperframes project of `templateId` into `dir` (created if needed). */
-export async function prepareProject(templateId: TemplateId, dir: string): Promise<void> {
+/** Writes the hyperframes project of `templateId`, in `format`, into `dir` (created if needed). */
+export async function prepareProject(templateId: TemplateId, dir: string, format: VideoFormat = '9:16'): Promise<void> {
   const spec = templateById(templateId);
   const layoutHtml = await readFile(path.join(PROJECT_DIR, 'layouts', `${spec.layout}.html`), 'utf8');
   await mkdir(path.join(dir, 'scripts'), { recursive: true });
-  await writeFile(path.join(dir, 'index.html'), composeTemplateHtml(layoutHtml, spec));
+  await writeFile(path.join(dir, 'index.html'), composeTemplateHtml(layoutHtml, spec, format));
   for (const script of ['common.js', `${spec.layout}.js`]) {
     await cp(path.join(PROJECT_DIR, 'scripts', script), path.join(dir, 'scripts', script));
   }

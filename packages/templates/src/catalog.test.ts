@@ -5,6 +5,7 @@ import {
   BACKGROUND_VARIANTS,
   backgroundFile,
   composeTemplateHtml,
+  FORMAT_SIZES,
   compositionVariables,
   CUC_CHOICES,
   fieldsFromQuery,
@@ -16,11 +17,13 @@ import {
   normalizeText,
   OCCASIONS,
   parseBackground,
+  parseFormat,
   STAR_CHOICES,
   TEMPLATE_IDS,
   TEMPLATES,
   templateById,
   validateInput,
+  VIDEO_FORMATS,
   ZODIAC_CHOICES,
 } from './catalog';
 import { PROJECT_DIR } from './project';
@@ -248,4 +251,37 @@ describe('background variants', () => {
     });
   }
 
+});
+
+describe('video formats', () => {
+  it('reads a format: none is 9:16, anything outside the list is refused', () => {
+    expect(parseFormat(undefined)).toBe('9:16');
+    expect(parseFormat('')).toBe('9:16');
+    for (const format of VIDEO_FORMATS) expect(parseFormat(format)).toBe(format);
+    for (const raw of ['16:9', '1x1', ' 1:1', '4:5 ', 1, {}, ['1:1']]) expect(parseFormat(raw)).toBeNull();
+  });
+
+  for (const layout of LAYOUT_IDS) {
+    const html = readFileSync(path.join(PROJECT_DIR, 'layouts', `${layout}.html`), 'utf8');
+    const spec = TEMPLATES.find((t) => t.layout === layout);
+    if (!spec) throw new Error(`no template on ${layout}`);
+
+    it(`${layout}: 9:16 is the layout as drawn`, () => {
+      expect(composeTemplateHtml(html, spec, '9:16')).toBe(composeTemplateHtml(html, spec));
+      expect(composeTemplateHtml(html, spec)).not.toContain('id="backdrop"');
+    });
+
+    for (const format of ['4:5', '1:1'] as const) {
+      it(`${layout}: ${format} sizes the frame and scales the 9:16 stage over a blurred backdrop`, () => {
+        const { width, height } = FORMAT_SIZES[format];
+        const out = composeTemplateHtml(html, spec, format);
+        expect(out).toContain(`data-width="${width}" data-height="${height}"`);
+        expect(out).toContain(`content="width=${width}, height=${height}"`);
+        expect(out).toContain(`html, body { width: ${width}px; height: ${height}px;`);
+        expect(out).toContain(`transform: scale(${height / 1920})`);
+        expect(out).toContain(`<img id="backdrop" src="themes/${spec.theme}/bg.webp"`);
+        expect(out).not.toContain('data-height="1920"');
+      });
+    }
+  }
 });

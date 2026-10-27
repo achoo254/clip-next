@@ -1,4 +1,4 @@
-import type { TemplateId } from '@clip/templates';
+import type { TemplateId, VideoFormat } from '@clip/templates';
 
 /** A refused API call: the server's stable error code plus its extra fields (limit, resetAt, field…). */
 export class ApiError extends Error {
@@ -56,12 +56,14 @@ export function createJob(
   templateId: TemplateId,
   fields: Readonly<Record<string, string>>,
   background: number,
+  format: VideoFormat,
   photos: readonly File[],
 ): Promise<{ job: Job }> {
   const form = new FormData();
   form.set('templateId', templateId);
   form.set('fields', JSON.stringify(fields));
   form.set('background', String(background));
+  form.set('format', format);
   for (const photo of photos) form.append('photos', photo, photo.name);
   return call<{ job: Job }>('/api/jobs', { method: 'POST', body: form });
 }

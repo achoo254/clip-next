@@ -14,11 +14,13 @@ import { spawn, spawnSync } from 'node:child_process';
 import { cp, mkdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { MAX_DURATION_SECONDS, type TemplateId } from '@clip/templates';
+import { FORMAT_SIZES, MAX_DURATION_SECONDS, type TemplateId, type VideoFormat } from '@clip/templates';
 import { prepareProject } from '@clip/templates/project';
 
 export interface RenderInput {
   readonly templateId: TemplateId;
+  /** Video shape; the layouts are drawn for 9:16 and fitted to the others. */
+  readonly format: VideoFormat;
   /** Composition variables; photo variables hold paths relative to the project (`photos/photo-1.jpg`). */
   readonly variables: Readonly<Record<string, string>>;
   /** Absolute paths of the photos, copied into the project as `photos/<file name>`. */
@@ -57,9 +59,6 @@ export class RenderError extends Error {
     this.name = 'RenderError';
   }
 }
-
-const WIDTH = 1080;
-const HEIGHT = 1920;
 
 /** The hyperframes CLI of this package's pinned dependency. */
 export function hyperframesBin(): string {
@@ -246,7 +245,7 @@ export async function renderVideo(input: RenderInput, options: RenderOptions): P
   const { workDir } = input;
   await mkdir(workDir, { recursive: true });
   try {
-    await prepareProject(input.templateId, workDir);
+    await prepareProject(input.templateId, workDir, input.format);
     await mkdir(path.join(workDir, 'photos'), { recursive: true });
     for (const photo of input.photos) await cp(photo, path.join(workDir, 'photos', path.basename(photo)));
     const variablesFile = path.join(workDir, 'variables.json');
@@ -274,7 +273,7 @@ export async function renderVideo(input: RenderInput, options: RenderOptions): P
     });
 
     const probed = probeVideo(mp4, options.ffprobePath);
-    if (!probed || probed.codec !== 'h264' || probed.width !== WIDTH || probed.height !== HEIGHT || probed.duration > MAX_DURATION_SECONDS + 0.5) {
+    if (!probed || probed.codec !== 'h264' || probed.width !== FORMAT_SIZES[input.format].width || probed.height !== FORMAT_SIZES[input.format].height || probed.duration > MAX_DURATION_SECONDS + 0.5) {
       throw new RenderError('bad-output', JSON.stringify(probed));
     }
     const { size } = await stat(mp4);

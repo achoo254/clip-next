@@ -26,6 +26,9 @@ nhỏ; code đã sẵn cho 6 nền mỗi mẫu `bg-2..6.webp` để người dù
 xong),
 bảng màu chữ (`theme.css`) và một bản nhạc; danh sách mẫu ở `packages/templates/src/catalog.ts`. Thêm mẫu là thêm
 một chủ đề, không thêm bố cục. Không có hình trang trí vẽ bằng CSS; gradient và lớp nền mờ chỉ để chữ dễ đọc.
+Video ra ba khổ: dọc 9:16 (1080×1920, khổ bố cục được vẽ), 4:5 (1080×1350) và vuông (1080×1080); hai khổ sau thu
+khung 9:16 nguyên vẹn theo chiều cao, đặt giữa, hai bên là nền của mẫu làm mờ (`composeTemplateHtml`), nên không bố
+cục nào phải vẽ lại và không mất chữ hay ảnh.
 Chuyển động viết bằng CSS animation (runtime của hyperframes tua được), chữ dùng font Be Vietnam Pro tự host, nhạc
 CC0.
 

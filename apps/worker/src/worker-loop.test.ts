@@ -24,7 +24,14 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-async function queue(templateId: string, fields: Record<string, string>, photos: number, at = new Date(), background?: number): Promise<string> {
+async function queue(
+  templateId: string,
+  fields: Record<string, string>,
+  photos: number,
+  at = new Date(),
+  background?: number,
+  format?: string,
+): Promise<string> {
   const [account] = await handle.db.insert(accounts).values({ sub: randomUUID(), createdAt: at }).returning();
   if (!account) throw new Error('no account');
   const id = randomUUID();
@@ -32,7 +39,7 @@ async function queue(templateId: string, fields: Record<string, string>, photos:
     await mkdir(media.inputDir(id), { recursive: true });
     await writeFile(media.photo(id, i), `photo ${i}`);
   }
-  const created = await createJob(handle.db, { id, accountId: account.id, templateId, fields, background, photoCount: photos }, at);
+  const created = await createJob(handle.db, { id, accountId: account.id, templateId, fields, background, format, photoCount: photos }, at);
   if (!created.ok) throw new Error('refused');
   return id;
 }
@@ -78,6 +85,18 @@ describe('worker', () => {
     expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('failed');
     expect(await job(missing)).toMatchObject({ status: 'failed', error: 'render-failed' });
     expect(seen).toHaveLength(1);
+  });
+
+  it('renders a job in its format, 9:16 for a job without one', async () => {
+    const square = await queue('trich-dan', { quote: 'q', author: '' }, 0, new Date(), undefined, '1:1');
+    const seen: RenderInput[] = [];
+    expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('done');
+    expect(seen[0]?.format).toBe('1:1');
+    expect(await job(square)).toMatchObject({ format: '1:1' });
+
+    await queue('trich-dan', { quote: 'q', author: '' }, 0);
+    expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('done');
+    expect(seen[1]?.format).toBe('9:16');
   });
 
   it('marks a job failed with the render error code', async () => {

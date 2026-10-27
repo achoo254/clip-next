@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { composeTemplateHtml, compositionVariables, templateById, type LayoutId, type TemplateId } from '@clip/templates';
+import {
+  composeTemplateHtml,
+  compositionVariables,
+  FORMAT_SIZES,
+  templateById,
+  type LayoutId,
+  type TemplateId,
+  type VideoFormat,
+} from '@clip/templates';
 import chart from '@clip/templates/project/layouts/chart.html?raw';
 import greeting from '@clip/templates/project/layouts/greeting.html?raw';
 import quick from '@clip/templates/project/layouts/quick.html?raw';
@@ -14,6 +22,8 @@ const DEBOUNCE_MS = 400;
 
 interface Props {
   readonly templateId: TemplateId;
+  /** The chosen video shape: the preview has its proportions. */
+  readonly format: VideoFormat;
   readonly fields: Readonly<Record<string, string>>;
   /** Object URLs of the chosen photos (they never leave the device for the preview). */
   readonly photoUrls: readonly string[];
@@ -27,13 +37,15 @@ interface Props {
  * theme has several backgrounds, previous/next buttons step through them; a background's picture is only fetched
  * once it is shown, so the page loads no more than before.
  */
-export function TemplatePreview({ templateId, fields, photoUrls, background, onBackgroundChange }: Props): ReactNode {
+export function TemplatePreview({ templateId, format, fields, photoUrls, background, onBackgroundChange }: Props): ReactNode {
   const { t } = useI18n();
   const [ready, setReady] = useState(false);
   const spec = templateById(templateId);
+  const size = FORMAT_SIZES[format];
   const target = useMemo(
-    () => previewDocument(composeTemplateHtml(LAYOUT_HTML[spec.layout], spec), compositionVariables(spec, fields, photoUrls, background), window.location.origin),
-    [spec, fields, photoUrls, background],
+    () =>
+      previewDocument(composeTemplateHtml(LAYOUT_HTML[spec.layout], spec, format), compositionVariables(spec, fields, photoUrls, background), window.location.origin),
+    [spec, format, fields, photoUrls, background],
   );
   // Wraps around: after the last background comes the first.
   const step = (delta: number): void => onBackgroundChange(((background - 1 + delta + spec.backgrounds) % spec.backgrounds) + 1);
@@ -59,7 +71,9 @@ export function TemplatePreview({ templateId, fields, photoUrls, background, onB
 
   return (
     <figure className="preview" data-id="preview">
-      <div className="preview-frame">{ready ? <hyperframes-player srcdoc={srcdoc} runtime-src={RUNTIME_SRC} width={1080} height={1920} controls loop /> : null}</div>
+      <div className="preview-frame" data-format={format}>
+        {ready ? <hyperframes-player srcdoc={srcdoc} runtime-src={RUNTIME_SRC} width={size.width} height={size.height} controls loop /> : null}
+      </div>
       {spec.backgrounds > 1 ? (
         <div className="bg-switch" role="group" aria-label={t('create.background')} data-id="preview-background">
           <span className="label">{t('create.background')}</span>

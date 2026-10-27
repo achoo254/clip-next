@@ -177,6 +177,24 @@ describe('POST /api/jobs', () => {
     expect(stored.map((j) => j.background).sort()).toEqual([1, last]);
   });
 
+  it('stores the chosen format, 9:16 when none is sent, and refuses any other', async () => {
+    const post = (cookie: string, format?: string) => {
+      const req = app.http().post('/api/jobs').set('Cookie', cookie).set('Origin', ORIGIN).field('templateId', 'trich-dan').field('fields', JSON.stringify(QUOTE));
+      return format === undefined ? req : req.field('format', format);
+    };
+    const first = await app.signIn('sub-1');
+    for (const bad of ['16:9', '1x1', '4:5 ', 'square']) {
+      const res = await post(first.cookie, bad);
+      expect(res.status, bad).toBe(400);
+      expect(res.body, bad).toEqual({ error: 'invalid-format' });
+    }
+    expect((await post(first.cookie, '4:5')).status).toBe(201);
+    const second = await app.signIn('sub-2');
+    expect((await post(second.cookie)).status).toBe(201);
+    const stored = await app.handle.db.select({ format: renderJobs.format }).from(renderJobs);
+    expect(stored.map((j) => j.format).sort()).toEqual(['4:5', '9:16']);
+  });
+
   it('allows one waiting job per account (429 job-in-progress)', async () => {
     const { cookie } = await app.signIn('sub-1');
     const post = () =>

@@ -862,8 +862,59 @@ export function thumbnailPath(spec: TemplateSpec): string {
  * A template's composition: its layout's HTML with the theme and music filled in (`{{theme}}`, `{{music}}`). The
  * worker renders this, `hyperframes check` checks it, the web preview plays it.
  */
-export function composeTemplateHtml(layoutHtml: string, spec: TemplateSpec): string {
-  return layoutHtml.replaceAll('{{theme}}', spec.theme).replaceAll('{{music}}', spec.music);
+/** The shapes a video can be made in: vertical (stories, Shorts), 4:5 (feed posts) and square. */
+export const VIDEO_FORMATS = ['9:16', '4:5', '1:1'] as const;
+export type VideoFormat = (typeof VIDEO_FORMATS)[number];
+
+/** Pixel size of each format. The layouts are drawn for 9:16 (1080×1920). */
+export const FORMAT_SIZES: Readonly<Record<VideoFormat, { readonly width: number; readonly height: number }>> = {
+  '9:16': { width: 1080, height: 1920 },
+  '4:5': { width: 1080, height: 1350 },
+  '1:1': { width: 1080, height: 1080 },
+};
+
+/** The format a job asked for: absent (old clients, old jobs) is 9:16; null when it is not one of VIDEO_FORMATS. */
+export function parseFormat(raw: unknown): VideoFormat | null {
+  if (raw === undefined || raw === null || raw === '') return '9:16';
+  return typeof raw === 'string' && (VIDEO_FORMATS as readonly string[]).includes(raw) ? (raw as VideoFormat) : null;
+}
+
+const DESIGN = FORMAT_SIZES['9:16'];
+
+function replaceOnce(html: string, from: string, to: string): string {
+  if (html.split(from).length !== 2) throw new Error(`layout: expected "${from}" exactly once`);
+  return html.replace(from, () => to);
+}
+
+/**
+ * The layout fitted to a shorter frame: the 9:16 stage, unchanged, is scaled to the frame's height and centred, over
+ * a blurred, enlarged copy of the background that fills the sides. Text, photos and stickers keep their places, so
+ * nothing is cut off and no layout needs a second design.
+ */
+function fitToFormat(layoutHtml: string, format: VideoFormat): string {
+  if (format === '9:16') return layoutHtml;
+  const { width, height } = FORMAT_SIZES[format];
+  const scale = height / DESIGN.height;
+  const left = Math.round(((width - DESIGN.width * scale) / 2) * 100) / 100;
+  let html = layoutHtml;
+  html = replaceOnce(html, `content="width=${DESIGN.width}, height=${DESIGN.height}"`, `content="width=${width}, height=${height}"`);
+  html = replaceOnce(html, `html, body { width: ${DESIGN.width}px; height: ${DESIGN.height}px;`, `html, body { width: ${width}px; height: ${height}px;`);
+  html = replaceOnce(html, `#root { position: relative; width: ${DESIGN.width}px; height: ${DESIGN.height}px;`, `#root { position: relative; width: ${width}px; height: ${height}px;`);
+  html = replaceOnce(html, `data-width="${DESIGN.width}" data-height="${DESIGN.height}"`, `data-width="${width}" data-height="${height}"`);
+  html = replaceOnce(
+    html,
+    '</style>',
+    `  #backdrop { position: absolute; left: -80px; top: -80px; width: calc(100% + 160px); height: calc(100% + 160px); object-fit: cover; filter: blur(48px) brightness(0.8); }
+  #stage { inset: auto; left: ${left}px; top: 0; width: ${DESIGN.width}px; height: ${DESIGN.height}px; transform: scale(${scale}); transform-origin: 0 0; }
+</style>`,
+  );
+  html = html.replace(/(<div id="root"[^>]*>)/, (root: string) => `${root}\n  <img id="backdrop" src="themes/{{theme}}/bg.webp" alt="" data-layout-allow-overflow />`);
+  return html;
+}
+
+/** The composition of a template in a format: the layout fitted to the format, with the theme and track filled in. */
+export function composeTemplateHtml(layoutHtml: string, spec: TemplateSpec, format: VideoFormat = '9:16'): string {
+  return fitToFormat(layoutHtml, format).replaceAll('{{theme}}', spec.theme).replaceAll('{{music}}', spec.music);
 }
 
 export function isTemplateId(value: unknown): value is TemplateId {

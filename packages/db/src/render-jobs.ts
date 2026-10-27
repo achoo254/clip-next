@@ -17,6 +17,8 @@ export interface NewJob {
   readonly fields: Record<string, string>;
   /** Chosen background (1-based, already validated); the first when omitted. */
   readonly background?: number;
+  /** Chosen video shape (already validated); 9:16 when omitted. */
+  readonly format?: string;
   readonly photoCount: number;
 }
 

@@ -40,6 +40,8 @@ export const renderJobs = pgTable(
     fields: jsonb('fields').$type<Record<string, string>>().notNull(),
     /** Which of the template's backgrounds (1-based, validated against the catalog); jobs from before the choice: 1. */
     background: integer('background').notNull().default(1),
+    /** Video shape ('9:16', '4:5' or '1:1', validated against the catalog); jobs from before the choice: '9:16'. */
+    format: text('format').notNull().default('9:16'),
     /** Photos stored for the job under MEDIA_DIR/inputs/<id>/ (deleted once rendered). */
     photoCount: integer('photo_count').notNull(),
     status: text('status').$type<JobStatus>().notNull(),
@@ -57,6 +59,7 @@ export const renderJobs = pgTable(
   (t) => [
     check('render_jobs_status_check', sql`${t.status} in ('queued', 'rendering', 'done', 'failed')`),
     check('render_jobs_background_check', sql`${t.background} >= 1`),
+    check('render_jobs_format_check', sql`${t.format} in ('9:16', '4:5', '1:1')`),
     index('render_jobs_account_created_idx').on(t.accountId, t.createdAt),
     index('render_jobs_queue_idx').on(t.status, t.createdAt),
     // One queued or rendering job per account, enforced by the database so two quick clicks cannot both pass.

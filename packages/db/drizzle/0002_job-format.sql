@@ -1,0 +1,2 @@
+ALTER TABLE "render_jobs" ADD COLUMN "format" text DEFAULT '9:16' NOT NULL;--> statement-breakpoint
+ALTER TABLE "render_jobs" ADD CONSTRAINT "render_jobs_format_check" CHECK ("render_jobs"."format" in ('9:16', '4:5', '1:1'));
