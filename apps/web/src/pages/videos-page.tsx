@@ -30,7 +30,7 @@ function ShareButton({ job }: { readonly job: Job }): ReactNode {
   };
   return (
     <>
-      <button type="button" className="btn btn-secondary" onClick={() => void share()} data-id={`share-${job.id}`}>
+      <button type="button" className="btn btn-primary" onClick={() => void share()} data-id={`share-${job.id}`}>
         {t('videos.share')}
       </button>
       {note ? <p className="muted small">{note}</p> : null}
@@ -54,10 +54,10 @@ function JobCard({ job }: { readonly job: Job }): ReactNode {
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video className="job-video" src={videoUrl(job.id)} controls playsInline preload="metadata" />
           <div className="job-actions">
-            <a className="btn btn-primary" href={downloadUrl(job.id)} download data-id={`download-${job.id}`}>
+            <ShareButton job={job} />
+            <a className="btn btn-secondary" href={downloadUrl(job.id)} download data-id={`download-${job.id}`}>
               {t('videos.download')}
             </a>
-            <ShareButton job={job} />
           </div>
           <p className="muted small">{t('videos.expires', { time: formatTime(job.expiresAt, locale) })}</p>
         </>

@@ -342,7 +342,7 @@ button {
   gap: var(--space-2);
 }
 .label {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-weight: 600;
   font-size: 13px;
   color: var(--c-text);
@@ -374,10 +374,11 @@ button {
 .hero-mark {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-md);
+  animation: float 3.2s ease-in-out infinite alternate;
 }
 .eyebrow {
-  font-family: var(--font-mono);
-  font-weight: 600;
+  font-family: var(--font-sans);
+  font-weight: 800;
   font-size: 13px;
   color: var(--c-primary);
   text-transform: uppercase;
@@ -403,8 +404,35 @@ button {
   color: var(--c-text);
   text-decoration: none;
 }
-.template-card:hover .template-thumb {
+.template-card .template-thumb {
+  transition:
+    transform var(--dur-base) var(--ease-decelerate),
+    box-shadow var(--dur-base) var(--ease-decelerate);
+}
+.template-card:hover .template-thumb,
+.template-card:focus-visible .template-thumb {
   box-shadow: var(--shadow-md);
+  transform: translateY(-4px) rotate(-1deg);
+}
+@keyframes float {
+  from {
+    transform: translateY(0) rotate(-3deg);
+  }
+  to {
+    transform: translateY(-8px) rotate(3deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-mark {
+    animation: none;
+  }
+  .template-card .template-thumb {
+    transition: none;
+  }
+  .template-card:hover .template-thumb,
+  .template-card:focus-visible .template-thumb {
+    transform: none;
+  }
 }
 .template-thumb {
   display: block;
@@ -470,7 +498,8 @@ button {
   gap: var(--space-2);
 }
 .chip {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-weight: 600;
   font-size: 13px;
   font-weight: 600;
   min-height: 36px;
