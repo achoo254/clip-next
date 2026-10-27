@@ -239,10 +239,10 @@ interface ThemeEntry {
 
 /**
  * Background pictures per theme: the original and variants drawn for the same occasion and palette, with the same
- * empty zones for the text and the photo frame, so the person's video need not look like everyone else's. 1 until the
- * variants (bg-2.webp … bg-6.webp of every theme) are drawn; then 6, and the catalog test checks the files.
+ * empty zones for the text and the photo frame, so the person's video need not look like everyone else's. Every theme
+ * ships bg.webp and bg-2.webp … bg-6.webp; the catalog test checks the files.
  */
-export const BACKGROUND_VARIANTS = 1;
+export const BACKGROUND_VARIANTS = 6;
 
 const ENTRIES: readonly ThemeEntry[] = [
   {

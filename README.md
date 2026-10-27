@@ -22,8 +22,7 @@ tinh, cục chọn theo id trong bộ hình của chủ đề + 3 dòng chữ v�
 `#fragment` để không bao giờ tới log máy chủ; mọi giá trị được kiểm theo danh sách cho phép và giới hạn ô, sai thì bỏ
 qua, rồi query và fragment được xoá khỏi thanh địa chỉ). Mỗi chủ đề
 (`project/themes/<chủ-đề>/`) là một bộ ảnh vẽ bằng AI (nền dọc `bg.webp`, khung ảnh, sticker nền trong suốt, ảnh thu
-nhỏ; code đã sẵn cho 6 nền mỗi mẫu `bg-2..6.webp` để người dùng chọn, bật bằng `BACKGROUND_VARIANTS` khi các nền đó vẽ
-xong),
+nhỏ; thêm 5 nền thay thế `bg-2..6.webp` cùng dịp, cùng bảng màu để người dùng chọn bằng nút "Đổi nền"),
 bảng màu chữ (`theme.css`) và một bản nhạc; danh sách mẫu ở `packages/templates/src/catalog.ts`. Thêm mẫu là thêm
 một chủ đề, không thêm bố cục. Không có hình trang trí vẽ bằng CSS; gradient và lớp nền mờ chỉ để chữ dễ đọc.
 Video ra ba khổ: dọc 9:16 (1080×1920, khổ bố cục được vẽ), 4:5 (1080×1350) và vuông (1080×1080); hai khổ sau thu

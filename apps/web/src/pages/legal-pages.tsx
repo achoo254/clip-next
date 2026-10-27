@@ -151,7 +151,9 @@ export function CreditsPage(): ReactNode {
         : AI-generated with OpenAI gpt-image for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0).
       </p>
       <p>
-        {locale === 'vi' ? 'Hình vẽ của các mẫu thêm sau' : "The art of the templates added later"}
+        {locale === 'vi'
+          ? 'Hình vẽ của các mẫu thêm sau, và các nền thay thế (nút "Đổi nền") của mọi mẫu'
+          : 'The art of the templates added later, and the alternative backgrounds ("Change background") of every template'}
         : AI-generated with open models (Qwen-Image, Z-Image-Turbo; Apache-2.0) for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0).
       </p>
       <p>
