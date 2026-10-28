@@ -17,8 +17,8 @@ import { BRAND_GENERATED_DIR, BRAND_ROOT, loadClipBrand, MANIFEST_OPTIONS } from
 
 const MASTER = new URL('brand/app-icon-master-1024.png', BRAND_ROOT);
 const MARK = new URL('apps/web/public/clip-mark-128.webp', BRAND_ROOT);
-/** The icon tile's violet, behind the maskable icon so the artwork can sit inside the safe zone. */
-const TILE = '#6f55d9';
+/** The icon tile's coral pink, behind the maskable icon so the artwork can sit inside the safe zone. */
+const TILE = '#f7537a';
 
 /** The master scaled to `size` as WebP bytes, encoded by Chrome's canvas. */
 async function webp(page: Page, png: Buffer, size: number, quality: number): Promise<Buffer> {
@@ -53,7 +53,7 @@ async function main(): Promise<void> {
     const page = await browser.newPage();
     const icon = (await webp(page, master, 512, 0.9)).toString('base64');
     const note =
-      '<!-- Clip app icon: AI-generated with OpenAI gpt-image for the hoandat ecosystem (brand/app-icon-master-1024.png), embedded as WebP by pnpm brand:gen. -->';
+      '<!-- Clip app icon: AI-generated with open models (FLUX.2 klein 4B; Apache-2.0) for the hoandat ecosystem (brand/app-icon-master-1024.png), embedded as WebP by pnpm brand:gen. -->';
     await writeFile(
       new URL('brand/icon.svg', BRAND_ROOT),
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">${note}<image width="512" height="512" href="data:image/webp;base64,${icon}"/></svg>\n`,

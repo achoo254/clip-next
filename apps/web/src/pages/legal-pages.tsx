@@ -146,8 +146,14 @@ export function CreditsPage(): ReactNode {
       </ul>
       <p>
         {locale === 'vi'
-          ? 'Biểu tượng app, cùng hình nền, khung ảnh và hình trang trí của 12 mẫu đầu'
-          : "The app icon, and the backgrounds, photo frames and stickers of the first 12 templates"}
+          ? 'Biểu tượng app'
+          : 'The app icon'}
+        : AI-generated with open models (FLUX.2 klein 4B; Apache-2.0) for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0).
+      </p>
+      <p>
+        {locale === 'vi'
+          ? 'Hình nền, khung ảnh và hình trang trí của 12 mẫu đầu'
+          : 'The backgrounds, photo frames and stickers of the first 12 templates'}
         : AI-generated with OpenAI gpt-image for the hoandat ecosystem; owned by hoandat, all rights reserved (not CC0).
       </p>
       <p>
