@@ -96,12 +96,6 @@ button {
 .page {
   padding-block: var(--space-6) var(--space-7);
 }
-/* The sign-out control in the shared header's place of the sign-in pill. */
-.topbar-button {
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-}
 /* building blocks (as auth-next) */
 .card {
   background: var(--c-surface);

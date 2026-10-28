@@ -109,4 +109,12 @@ describe('sign-in page and signed in', () => {
     expect(document.querySelector('[data-id=public-sign-in]')).toBeNull();
     expect(document.querySelector('[data-id=nav-videos]')?.getAttribute('aria-current')).toBe('page');
   });
+
+  it('repeats the header links in the footer, where phones find them', async () => {
+    answerMe({ signedIn: true, signInAvailable: true });
+    show('/video', <p>Body</p>);
+    await screen.findByRole('button', { name: 'Đăng xuất' });
+    expect(document.querySelector('[data-id=foot-nav-create]')?.getAttribute('href')).toBe('/tao');
+    expect(document.querySelector('[data-id=foot-nav-videos]')?.getAttribute('href')).toBe('/video');
+  });
 });

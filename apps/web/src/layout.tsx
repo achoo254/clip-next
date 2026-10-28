@@ -4,7 +4,7 @@ import { Link, useLocation, useSearchParams } from 'react-router';
 import { LOGIN_PATH, loginPageHref } from './api';
 import { useAccount } from './account';
 import { brand } from './brand';
-import { LOCALES, isLocale, useI18n } from './i18n';
+import { LOCALES, useI18n } from './i18n';
 
 /** The app as the shared shell names it; the mark is the AI-drawn one in apps/web/public (pnpm brand:gen). */
 export const SHELL_BRAND: ShellBrand = { appName: brand.appName, domain: brand.primaryTenant.domain, markSrc: '/clip-mark-128.webp' };
@@ -23,7 +23,7 @@ function SignOutButton(): ReactNode {
   const { signOut } = useAccount();
   const { t } = useI18n();
   return (
-    <button type="button" className="shell-topbar-link topbar-button" onClick={() => void signOut()} data-id="sign-out">
+    <button type="button" className="shell-topbar-link" onClick={() => void signOut()} data-id="sign-out">
       {t('auth.signOut')}
     </button>
   );
@@ -53,8 +53,8 @@ export function Layout({ children }: { readonly children: ReactNode }): ReactNod
   const here = useHere();
   const onLogin = pathname === LOGIN_PATH;
   const navLinks: ShellLink[] = [
-    // Phones have room for the name and two controls; the mark and name open the create page once signed in.
-    { href: '/tao', label: t('nav.create'), dataId: 'nav-create', current: pathname === '/tao', hideOnPhones: true },
+    // Under 480px the header keeps the whole app name: both links move to the footer (hideNavOnPhones).
+    { href: '/tao', label: t('nav.create'), dataId: 'nav-create', current: pathname === '/tao' },
     { href: '/video', label: t('nav.videos'), dataId: 'nav-videos', current: pathname === '/video' },
   ];
   const footerLinks: ShellLink[] = [
@@ -64,19 +64,18 @@ export function Layout({ children }: { readonly children: ReactNode }): ReactNod
   let accountSlot: ReactNode;
   if (me?.signedIn === true) accountSlot = <SignOutButton />;
   // Sign-in is not configured on this server: no pill that would only come back with "not available".
-  else if (me !== null && !me.signInAvailable) accountSlot = <></>;
+  else if (me !== null && !me.signInAvailable) accountSlot = null;
 
   return (
     <PublicPage
       brand={SHELL_BRAND}
       locale={locale}
       locales={LOCALES}
-      onLocaleChange={(next) => {
-        if (isLocale(next)) setLocale(next);
-      }}
+      onLocaleChange={setLocale}
       signInHref={loginPageHref(here)}
       signInCurrent={onLogin}
       navLinks={navLinks}
+      hideNavOnPhones
       accountSlot={accountSlot}
       footerLinks={footerLinks}
       linkComponent={RouterLink}
