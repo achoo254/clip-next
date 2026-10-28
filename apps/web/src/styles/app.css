@@ -1,6 +1,6 @@
-/* Clip page styles. Every colour, radius, duration and spacing step comes from tokens.css (checked by
-   `pnpm check:tokens`); the header and footer follow auth-next's (static/css/app.css), the shared frame of the
-   ecosystem's apps. */
+/* Clip page styles. Every colour, radius, duration and spacing step comes from the shared tokens
+   (@achoo254/app-shell tokens.css, light and dark; checked by `pnpm check:tokens`). The header, frame, footer,
+   hero, sign-in card and feature list are the shared shell's (app-shell.css); the rest is the app's body. */
 
 *,
 *::before,
@@ -92,136 +92,16 @@ button {
   gap: var(--space-3);
 }
 
-/* topbar + wordmark (as auth-next) */
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  background: color-mix(in srgb, var(--c-bg) 82%, transparent);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--c-border-subtle);
+/* The body of every page inside the shared frame. */
+.page {
+  padding-block: var(--space-6) var(--space-7);
 }
-.topbar-inner {
-  min-height: var(--topbar-h);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-.app-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 44px;
-  font-size: 18px;
-  color: var(--c-text);
-  text-decoration: none;
-}
-.app-brand b {
-  color: var(--c-primary);
-}
-.app-brand-mark {
-  flex: none;
-  border-radius: var(--radius-sm);
-}
-.topbar-nav {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-.topbar-link {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--c-text-muted);
-  text-decoration: none;
-  white-space: nowrap;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard);
-}
-.topbar-link:hover {
-  color: var(--c-text);
-  background: color-mix(in srgb, var(--c-text) 6%, transparent);
-}
-.topbar-link[aria-current='page'] {
-  color: var(--c-primary);
-  background: color-mix(in srgb, var(--c-primary) 10%, transparent);
-}
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.lang-switch {
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-full);
-  background: var(--c-surface);
-}
-.lang-option {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--c-text-muted);
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid transparent;
-  border-radius: var(--radius-full);
+/* The sign-out control in the shared header's place of the sign-in pill. */
+.topbar-button {
+  border: 0;
   background: transparent;
   cursor: pointer;
 }
-.lang-option:hover {
-  color: var(--c-text);
-}
-.lang-option[aria-pressed='true'] {
-  color: var(--c-primary);
-  background: color-mix(in srgb, var(--c-primary) 8%, var(--c-surface));
-  border-color: color-mix(in srgb, var(--c-primary) 30%, var(--c-surface));
-}
-@media (pointer: coarse), (max-width: 479px) {
-  .topbar-link,
-  .foot-link,
-  .lang-option {
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-  }
-}
-
-/* page + footer */
-.page {
-  flex: 1;
-  padding-block: var(--space-7);
-}
-.page-foot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  padding-bottom: var(--space-7);
-}
-.foot-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  column-gap: var(--space-4);
-}
-.foot-link {
-  font-size: 13px;
-  color: var(--c-text-muted);
-  text-decoration: none;
-}
-.foot-link:hover {
-  color: var(--c-text);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
 /* building blocks (as auth-next) */
 .card {
   background: var(--c-surface);
@@ -291,9 +171,6 @@ button {
   border: 1px solid;
   font-size: 14px;
   color: var(--c-text);
-}
-.alert.container {
-  margin-top: var(--space-4);
 }
 .alert-error {
   background: color-mix(in srgb, var(--c-error) 8%, var(--c-surface));
@@ -365,24 +242,8 @@ button {
 }
 
 /* intro */
-.hero {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-6);
-}
-.hero-mark {
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
-  animation: float 3.2s ease-in-out infinite alternate;
-}
-.eyebrow {
-  font-family: var(--font-sans);
-  font-weight: 800;
-  font-size: 13px;
-  color: var(--c-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+.intro .shell-hero {
+  padding-block: 0;
 }
 .lead {
   font-size: 18px;
@@ -414,18 +275,7 @@ button {
   box-shadow: var(--shadow-md);
   transform: translateY(-4px) rotate(-1deg);
 }
-@keyframes float {
-  from {
-    transform: translateY(0) rotate(-3deg);
-  }
-  to {
-    transform: translateY(-8px) rotate(3deg);
-  }
-}
 @media (prefers-reduced-motion: reduce) {
-  .hero-mark {
-    animation: none;
-  }
   .template-card .template-thumb {
     transition: none;
   }

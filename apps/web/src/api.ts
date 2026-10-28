@@ -68,9 +68,24 @@ export function createJob(
   return call<{ job: Job }>('/api/jobs', { method: 'POST', body: form });
 }
 
+/** The app's sign-in page (the shared sign-in card), where the header's sign-in pill goes. */
+export const LOGIN_PATH = '/login';
+
+/** A page of this site to come back to after sign-in, as the server checks it; home otherwise, never /login. */
+export function safeReturnPath(value: string | null | undefined): string {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return '/';
+  return value === LOGIN_PATH || value.startsWith(`${LOGIN_PATH}?`) ? '/' : value;
+}
+
+/** The sign-in page, remembering the page the visitor was on (home needs no reminder). */
+export function loginPageHref(here: string): string {
+  const back = safeReturnPath(here);
+  return back === '/' ? LOGIN_PATH : `${LOGIN_PATH}?${new URLSearchParams({ return: back }).toString()}`;
+}
+
 /** Sign-in page of the account service, coming back to `returnTo`. */
 export function signInUrl(returnTo: string, lang: string): string {
-  return `/auth/login?${new URLSearchParams({ return: returnTo, lang }).toString()}`;
+  return `/auth/login?${new URLSearchParams({ return: safeReturnPath(returnTo), lang }).toString()}`;
 }
 
 export const videoUrl = (id: string): string => `/api/jobs/${encodeURIComponent(id)}/video`;

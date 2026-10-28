@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json"
   },
   "dependencies": {
-    "@achoo254/brand": "github:achoo254/shared-next#v0.5.1&path:/packages/brand",
+    "@achoo254/app-shell": "github:achoo254/shared-next#v0.8.0&path:/packages/app-shell",
+    "@achoo254/brand": "github:achoo254/shared-next#v0.8.0&path:/packages/brand",
     "@clip/templates": "workspace:*",
     "@fontsource/inter": "^5.2.0",
     "@fontsource/jetbrains-mono": "^5.2.0",

@@ -1,3 +1,4 @@
+import { FeatureList, Hero, SignInCard } from '@achoo254/app-shell';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { MAX_DURATION_SECONDS, TEMPLATES, thumbnailPath } from '@clip/templates';
@@ -6,33 +7,38 @@ import { signInUrl } from '../api';
 import { useAccount } from '../account';
 import { brand } from '../brand';
 import { useI18n } from '../i18n';
+import { SHELL_BRAND } from '../layout';
 
 const DAILY_LIMIT = 5;
+const FEATURES = ['pick', 'type', 'render', 'free'] as const;
 
-/** The page people see before signing in: what the app does, the templates, the limits. */
+/**
+ * The page people see before signing in: the shared hero and sign-in card (one call to action), the templates
+ * (each opens the create page, where the preview works signed out), and how it works.
+ */
 export function IntroPage(): ReactNode {
   const { t, locale } = useI18n();
   const { me } = useAccount();
+  const canSignIn = me?.signInAvailable === true;
   return (
     <div className="intro stack-lg" data-id="intro">
-      <section className="hero">
-        <img className="hero-mark" src="/clip-mark-128.webp" width="96" height="96" alt="" aria-hidden="true" />
-        <div className="stack">
-          <p className="eyebrow">{brand.appName}</p>
-          <h1>{t('intro.title')}</h1>
-          <p className="lead">{t('intro.lead')}</p>
-          <div className="row">
-            <Link className="btn btn-primary btn-lg" to="/tao" data-id="intro-start">
-              {t('intro.start')}
-            </Link>
-            {me && !me.signedIn ? (
-              <a className="btn btn-secondary btn-lg" href={signInUrl('/tao', locale)} data-id="intro-sign-in">
-                {t('intro.signIn')}
-              </a>
-            ) : null}
-          </div>
-        </div>
-      </section>
+      <Hero
+        eyebrow={brand.appName}
+        title={t('intro.title')}
+        lede={t('intro.lead')}
+        aside={
+          canSignIn ? (
+            <SignInCard
+              brand={SHELL_BRAND}
+              locale={locale}
+              signInHref={signInUrl('/tao', locale)}
+              title={t('signIn.title')}
+              description={t('signIn.lead')}
+              headingLevel={2}
+            />
+          ) : undefined
+        }
+      />
 
       <section className="stack" aria-labelledby="intro-templates">
         <h2 id="intro-templates">{t('intro.templates')}</h2>
@@ -50,15 +56,15 @@ export function IntroPage(): ReactNode {
         </ul>
       </section>
 
-      <section className="stack" aria-labelledby="intro-how">
-        <h2 id="intro-how">{t('intro.how')}</h2>
-        <ol className="steps">
-          <li>{t('intro.step1')}</li>
-          <li>{t('intro.step2')}</li>
-          <li>{t('intro.step3')}</li>
-        </ol>
-        <p className="muted">{t('intro.limits', { limit: DAILY_LIMIT, seconds: MAX_DURATION_SECONDS })}</p>
-      </section>
+      <FeatureList
+        id="how"
+        title={t('intro.how')}
+        items={FEATURES.map((id) => ({
+          id,
+          title: t(`features.${id}.title`),
+          description: t(`features.${id}.text`, { limit: DAILY_LIMIT, seconds: MAX_DURATION_SECONDS }),
+        }))}
+      />
     </div>
   );
 }

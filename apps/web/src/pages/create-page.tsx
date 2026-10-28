@@ -1,3 +1,4 @@
+import { SignInCard } from '@achoo254/app-shell';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import {
@@ -22,7 +23,7 @@ import { useAccount } from '../account';
 import { errorMessage } from '../error-message';
 import { FormatPicker } from './format-picker';
 import { useI18n } from '../i18n';
-import { useHere } from '../layout';
+import { SHELL_BRAND, useHere } from '../layout';
 import { TemplatePreview } from '../preview/template-preview';
 import { TemplatePicker } from './template-picker';
 
@@ -270,11 +271,10 @@ export function CreatePage(): ReactNode {
             <button type="submit" className="btn btn-primary btn-lg" disabled={busy} data-id="render">
               {busy ? t('create.rendering') : t('create.render')}
             </button>
-          ) : (
-            <a className="btn btn-primary btn-lg" href={signInUrl(here, locale)} data-id="render-sign-in">
-              {t('create.signInToRender')}
-            </a>
-          )}
+          ) : me?.signInAvailable === true ? (
+            // Signed out: the shared sign-in card, back to this page (the template and its fields are in the URL).
+            <SignInCard brand={SHELL_BRAND} locale={locale} signInHref={signInUrl(here, locale)} title={t('create.signInToRender')} headingLevel={2} />
+          ) : null}
         </form>
 
         <section className="preview-column" aria-label={t('create.preview')} data-id="preview-column">

@@ -5,5 +5,5 @@
     // Vite loads its config natively: relative imports carry their extension.
     "allowImportingTsExtensions": true
   },
-  "include": ["vite.config.ts", "vite-clip.ts", "vite-seo.ts", "../../scripts/brand-options.ts"]
+  "include": ["vite.config.ts", "vite-clip.ts", "vite-seo.ts", "vite-theme-bootstrap.ts", "vite-theme-bootstrap.test.ts", "../../scripts/brand-options.ts"]
 }

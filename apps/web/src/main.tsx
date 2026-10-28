@@ -2,7 +2,8 @@ import '@fontsource/inter/400.css';
 import '@fontsource/inter/600.css';
 import '@fontsource/inter/800.css';
 import '@fontsource/jetbrains-mono/600.css';
-import './styles/tokens.css';
+import '@achoo254/app-shell/tokens.css';
+import '@achoo254/app-shell/app-shell.css';
 import './styles/app.css';
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -12,6 +13,7 @@ import { I18nProvider } from './i18n';
 import { Layout } from './layout';
 import { CreatePage } from './pages/create-page';
 import { IntroPage } from './pages/intro-page';
+import { LoginPage } from './pages/login-page';
 import { CreditsPage, PrivacyPage, TermsPage } from './pages/legal-pages';
 import { NotFound } from './pages/not-found';
 import { TemplatePage, TemplatesIndexPage } from './pages/template-pages';
@@ -38,6 +40,7 @@ createRoot(container).render(
               <Route path="/video" element={<VideosPage />} />
               <Route path="/mau" element={<TemplatesIndexPage />} />
               <Route path="/mau/:id" element={<TemplatePage />} />
+              <Route path="/login" element={<LoginPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/credits" element={<CreditsPage />} />

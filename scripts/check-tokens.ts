@@ -3,10 +3,11 @@
  * same design system).
  *
  * 1. Literal scan: apps/web/src and apps/web/index.html must not contain colour literals (hex, rgb()/hsl()/…) or
- *    raw px spacing; those live only in apps/web/src/styles/tokens.css. Allowlist and ignore marker are documented
+ *    raw px spacing; those live only in the shared tokens (@achoo254/app-shell tokens.css, the app has none of
+ *    its own). Allowlist and ignore marker are documented
  *    in scripts/check-tokens/scan-literals.ts. The video templates (packages/templates/project) are artwork with
  *    their own colours and are not scanned.
- * 2. Token consistency: the OS-preference dark block and the forced dark block in tokens.css must stay identical.
+ * 2. Token consistency: the OS-preference dark block and the forced dark block of the shared tokens are identical.
  * 3. Contrast: main text/background pairs meet WCAG 4.5:1 (UI parts 3:1) in light and dark; APCA Lc is printed as
  *    an advisory value.
  *
@@ -18,10 +19,10 @@ import { fileURLToPath } from 'node:url';
 import { APCA_BODY_TEXT_LC, type ContrastResult, evaluatePairs } from './check-tokens/contrast.js';
 import { diffDarkBlocks, resolveThemes } from './check-tokens/parse-tokens.js';
 import { findLiteralViolations, type LiteralViolation } from './check-tokens/scan-literals.js';
+import { SHARED_TOKENS_FILE } from './check-tokens/shared-tokens.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WEB = path.join(ROOT, 'apps/web');
-const TOKENS_FILE = path.join(WEB, 'src/styles/tokens.css');
 const WEB_SRC = path.join(WEB, 'src');
 const EXTRA_FILES = [path.join(WEB, 'index.html')];
 const SCANNED_EXTENSIONS = new Set(['.ts', '.tsx', '.css']);
@@ -40,7 +41,7 @@ async function listSourceFiles(dir: string): Promise<string[]> {
 
 async function scanLiterals(): Promise<LiteralViolation[]> {
   const sources = await listSourceFiles(WEB_SRC);
-  const files = [...sources.filter((file) => file !== TOKENS_FILE), ...EXTRA_FILES].sort();
+  const files = [...sources, ...EXTRA_FILES].sort();
   const results = await Promise.all(files.map(async (file) => findLiteralViolations(await readFile(file, 'utf8'), path.relative(ROOT, file))));
   return results.flat();
 }
@@ -58,17 +59,17 @@ async function main(): Promise<number> {
   const violations = await scanLiterals();
   if (violations.length > 0) {
     failed = true;
-    console.error(`✗ ${violations.length} design-token bypass(es) in web (use a token from apps/web/src/styles/tokens.css):`);
+    console.error(`✗ ${violations.length} design-token bypass(es) in web (use a token of @achoo254/app-shell tokens.css):`);
     for (const v of violations) console.error(`  ${v.file}:${v.line}  [${v.rule}]  ${v.match}`);
   } else {
     console.log('✓ No colour literals or raw px spacing in web');
   }
 
-  const themes = resolveThemes(await readFile(TOKENS_FILE, 'utf8'));
+  const themes = resolveThemes(await readFile(SHARED_TOKENS_FILE, 'utf8'));
   const drift = diffDarkBlocks(themes);
   if (drift.length > 0) {
     failed = true;
-    console.error('✗ Dark token blocks drifted apart in tokens.css:');
+    console.error('✗ Dark token blocks drifted apart in the shared tokens.css:');
     for (const line of drift) console.error(`  ${line}`);
   } else {
     console.log('✓ Dark blocks (media query and data-theme) are identical');
