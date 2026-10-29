@@ -2,13 +2,12 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { clipBrand, clipOrigin, clipTemplates, REPO_ROOT_PATH } from './vite-clip.ts';
 import { clipSeo } from './vite-seo.ts';
-import { themeBootstrap } from './vite-theme-bootstrap.ts';
 
 // The API server listens on 127.0.0.1:5292 in dev; the web dev server proxies to it so cookies stay same-origin.
 const API = 'http://127.0.0.1:5292';
 
 export default defineConfig({
-  plugins: [react(), ...clipBrand(), themeBootstrap(), clipTemplates(), clipSeo(clipOrigin())],
+  plugins: [react(), ...clipBrand(), clipTemplates(), clipSeo(clipOrigin())],
   server: {
     host: '127.0.0.1',
     fs: { allow: [REPO_ROOT_PATH] },

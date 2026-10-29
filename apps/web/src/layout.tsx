@@ -1,16 +1,14 @@
-import { PublicPage, type ShellBrand, type ShellLink, type ShellLinkComponent } from '@achoo254/app-shell';
+import { writePreference } from '@achoo254/app-shell/preferences';
 import type { ReactNode } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router';
+import type { Locale } from '@clip/templates';
 import { LOGIN_PATH, loginPageHref } from './api';
 import { useAccount } from './account';
-import { brand } from './brand';
+import { brand, HOME_URL } from './brand';
 import { LOCALES, useI18n } from './i18n';
 
-/** The app as the shared shell names it; the mark is the AI-drawn one in apps/web/public (pnpm brand:gen). */
-export const SHELL_BRAND: ShellBrand = { appName: brand.appName, domain: brand.primaryTenant.domain, markSrc: '/clip-mark-128.webp' };
-
-/** Links to the app's own pages go through the router, without reloading the page. */
-const RouterLink: ShellLinkComponent = ({ href, ...rest }) => <Link to={href} {...rest} />;
+/** Each language in its own words, never translated; the switch shows the short code. */
+const LOCALE_NAMES: Readonly<Record<Locale, string>> = { vi: 'Tiếng Việt', en: 'English' };
 
 /** Path plus query of the current page: where sign-in comes back to. */
 export function useHere(): string {
@@ -18,14 +16,129 @@ export function useHere(): string {
   return `${location.pathname}${location.search}`;
 }
 
-/** The sign-out control in the header's place of the sign-in pill, styled as the header's links. */
-function SignOutButton(): ReactNode {
-  const { signOut } = useAccount();
-  const { t } = useI18n();
+/**
+ * The language switch: one button per language of the app. A pick is stored in the cookie shared by every
+ * hoandat.com app (`hd_lang`), so the next app opens in it too.
+ */
+function LanguageSwitch(): ReactNode {
+  const { t, locale, setLocale } = useI18n();
   return (
-    <button type="button" className="shell-topbar-link" onClick={() => void signOut()} data-id="sign-out">
-      {t('auth.signOut')}
-    </button>
+    <fieldset className="lang-switch" data-id="lang-switch">
+      <legend className="visually-hidden">{t('chrome.language')}</legend>
+      {LOCALES.map((option) => (
+        <button
+          key={option}
+          type="button"
+          className="lang-option"
+          lang={option}
+          aria-label={LOCALE_NAMES[option]}
+          title={LOCALE_NAMES[option]}
+          aria-pressed={option === locale}
+          onClick={() => {
+            writePreference('lang', option, { domain: brand.primaryTenant.domain });
+            setLocale(option);
+          }}
+          data-id={`lang-${option}`}
+        >
+          {option.toUpperCase()}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+/** Signed in: sign out. Signed out: the sign-in pill to /login, unless sign-in is not configured on this server. */
+function AccountControl(): ReactNode {
+  const { t } = useI18n();
+  const { me, signOut } = useAccount();
+  const { pathname } = useLocation();
+  const here = useHere();
+  if (me?.signedIn === true) {
+    return (
+      <button type="button" className="header-pill" onClick={() => void signOut()} data-id="sign-out">
+        {t('auth.signOut')}
+      </button>
+    );
+  }
+  // Still checking, or no sign-in here: no pill that would only come back with "not available".
+  if (me === null || !me.signInAvailable) return null;
+  return (
+    <Link
+      to={loginPageHref(here)}
+      className="header-pill header-pill-cta"
+      aria-current={pathname === LOGIN_PATH ? 'page' : undefined}
+      data-id="public-sign-in"
+    >
+      {t('chrome.signIn')}
+    </Link>
+  );
+}
+
+function Header(): ReactNode {
+  const { t } = useI18n();
+  const { pathname } = useLocation();
+  const links = [
+    { to: '/tao', label: t('nav.create'), dataId: 'nav-create' },
+    { to: '/video', label: t('nav.videos'), dataId: 'nav-videos' },
+  ] as const;
+  return (
+    <header className="site-header" data-id="app-header">
+      <div className="site-header-inner container">
+        <Link to="/" className="brand" data-id="home">
+          <img className="brand-mark" src="/clip-mark-128.webp" width="40" height="40" alt="" />
+          <span className="brand-name">{brand.appName}</span>
+        </Link>
+        <nav className="site-nav" aria-label={t('chrome.nav')}>
+          {links.map((link) => (
+            <Link key={link.to} to={link.to} className="nav-link" aria-current={pathname === link.to ? 'page' : undefined} data-id={link.dataId}>
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="header-end">
+          <LanguageSwitch />
+          <AccountControl />
+        </div>
+      </div>
+      <div className="marquee-lights" aria-hidden="true" />
+    </header>
+  );
+}
+
+function Footer(): ReactNode {
+  const { t } = useI18n();
+  const { pathname } = useLocation();
+  const links = [
+    { to: '/privacy', label: t('chrome.privacy'), dataId: 'foot-privacy' },
+    { to: '/terms', label: t('chrome.terms'), dataId: 'foot-terms' },
+    { to: '/mau', label: t('foot.templates'), dataId: 'foot-templates' },
+    { to: '/credits', label: t('foot.credits'), dataId: 'foot-credits' },
+  ] as const;
+  return (
+    <footer className="site-footer" data-id="app-footer">
+      <div className="site-footer-inner container">
+        <p className="footer-brand" aria-hidden="true">
+          <img src="/clip-mark-128.webp" width="32" height="32" alt="" />
+          <span>{brand.appName}</span>
+        </p>
+        <nav className="footer-links" aria-label={t('chrome.footLinks')}>
+          <a className="footer-link footer-home" href={HOME_URL} data-id="foot-home">
+            {t('chrome.ecosystem', { domain: brand.primaryTenant.domain })}
+          </a>
+          {links.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className="footer-link"
+              aria-current={pathname === link.to || (link.to === '/mau' && pathname.startsWith('/mau/')) ? 'page' : undefined}
+              data-id={link.dataId}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
+    </footer>
   );
 }
 
@@ -43,52 +156,31 @@ function LoginNotice(): ReactNode {
 }
 
 /**
- * Every page, signed out or in: the header, frame and footer of every hoandat.com app (@achoo254/app-shell),
- * with the language and theme switches in the footer, around the page.
+ * Every page, signed out or in: Clip's own cinema chrome (marquee header with the language switch, credits-roll
+ * footer saying the app belongs to hoandat.com) around the page. /login centres its ticket instead.
  */
 export function Layout({ children }: { readonly children: ReactNode }): ReactNode {
-  const { t, locale, setLocale } = useI18n();
-  const { me } = useAccount();
+  const { t } = useI18n();
   const { pathname } = useLocation();
-  const here = useHere();
   const onLogin = pathname === LOGIN_PATH;
-  const navLinks: ShellLink[] = [
-    // Under 480px the header keeps the whole app name: both links move to the footer (hideNavOnPhones).
-    { href: '/tao', label: t('nav.create'), dataId: 'nav-create', current: pathname === '/tao' },
-    { href: '/video', label: t('nav.videos'), dataId: 'nav-videos', current: pathname === '/video' },
-  ];
-  const footerLinks: ShellLink[] = [
-    { href: '/mau', label: t('foot.templates'), dataId: 'foot-templates', current: pathname.startsWith('/mau') },
-    { href: '/credits', label: t('foot.credits'), dataId: 'foot-credits', current: pathname === '/credits' },
-  ];
-  let accountSlot: ReactNode;
-  if (me?.signedIn === true) accountSlot = <SignOutButton />;
-  // Sign-in is not configured on this server: no pill that would only come back with "not available".
-  else if (me !== null && !me.signInAvailable) accountSlot = null;
-
   return (
-    <PublicPage
-      brand={SHELL_BRAND}
-      locale={locale}
-      locales={LOCALES}
-      onLocaleChange={setLocale}
-      signInHref={loginPageHref(here)}
-      signInCurrent={onLogin}
-      navLinks={navLinks}
-      hideNavOnPhones
-      accountSlot={accountSlot}
-      footerLinks={footerLinks}
-      linkComponent={RouterLink}
-      layout={onLogin ? 'center' : 'flow'}
-    >
-      {onLogin ? (
-        children
-      ) : (
-        <div className="page stack-lg">
-          <LoginNotice />
-          {children}
-        </div>
-      )}
-    </PublicPage>
+    <div className="site">
+      <a className="skip-link" href="#main" data-id="skip-link">
+        {t('chrome.skip')}
+      </a>
+      <Header />
+      {/* Focusable by the skip link only, not in the tab order. */}
+      <main id="main" tabIndex={-1} className={onLogin ? 'site-main site-main-center container' : 'site-main container'}>
+        {onLogin ? (
+          children
+        ) : (
+          <div className="page stack-lg">
+            <LoginNotice />
+            {children}
+          </div>
+        )}
+      </main>
+      <Footer />
+    </div>
   );
 }

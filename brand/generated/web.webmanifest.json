@@ -8,8 +8,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "theme_color": "#f9f9fb",
-  "background_color": "#f9f9fb",
+  "theme_color": "#100b0c",
+  "background_color": "#100b0c",
   "categories": [
     "entertainment",
     "photo"

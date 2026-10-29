@@ -1,9 +1,10 @@
-import '@fontsource/inter/400.css';
-import '@fontsource/inter/600.css';
-import '@fontsource/inter/800.css';
-import '@fontsource/jetbrains-mono/600.css';
-import '@achoo254/app-shell/tokens.css';
-import '@achoo254/app-shell/app-shell.css';
+// Self-hosted fonts with the Vietnamese subset (no font CDN: the CSP allows only 'self').
+import '@fontsource/be-vietnam-pro/400.css';
+import '@fontsource/be-vietnam-pro/600.css';
+import '@fontsource/be-vietnam-pro/800.css';
+import '@fontsource/oswald/500.css';
+import '@fontsource/oswald/700.css';
+import './styles/tokens.css';
 import './styles/app.css';
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';

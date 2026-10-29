@@ -1,4 +1,3 @@
-import { FeatureList, Hero, SignInCard } from '@achoo254/app-shell';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { MAX_DURATION_SECONDS, TEMPLATES, thumbnailPath } from '@clip/templates';
@@ -7,14 +6,15 @@ import { signInUrl } from '../api';
 import { useAccount } from '../account';
 import { brand } from '../brand';
 import { useI18n } from '../i18n';
-import { SHELL_BRAND } from '../layout';
+import { SignInTicket } from '../sign-in-ticket';
 
 const DAILY_LIMIT = 5;
 const FEATURES = ['pick', 'type', 'render', 'free'] as const;
 
 /**
- * The page people see before signing in: the shared hero and sign-in card (one call to action), the templates
- * (each opens the create page, where the preview works signed out), and how it works.
+ * The page people see before signing in: the marquee hero with the mascot and the sign-in ticket (one call to
+ * action), the templates as a wall of posters (each opens the create page, where the preview works signed out), and
+ * how it works as the frames of a film strip.
  */
 export function IntroPage(): ReactNode {
   const { t, locale } = useI18n();
@@ -22,27 +22,23 @@ export function IntroPage(): ReactNode {
   const canSignIn = me?.signInAvailable === true;
   return (
     <div className="intro stack-lg" data-id="intro">
-      <Hero
-        eyebrow={brand.appName}
-        title={t('intro.title')}
-        lede={t('intro.lead')}
-        aside={
-          canSignIn ? (
-            <SignInCard
-              brand={SHELL_BRAND}
-              locale={locale}
-              signInHref={signInUrl('/tao', locale)}
-              title={t('signIn.title')}
-              description={t('signIn.lead')}
-              headingLevel={2}
-            />
-          ) : undefined
-        }
-      />
+      <section className={canSignIn ? 'hero hero-split' : 'hero'} data-id="hero">
+        <div className="hero-copy">
+          <p className="marquee-sign">{brand.appName}</p>
+          <h1 className="hero-title">{t('intro.title')}</h1>
+          <p className="lead">{t('intro.lead')}</p>
+        </div>
+        <div className="hero-aside">
+          <img className="hero-mascot" src="/clip-mascot-384.webp" width="192" height="192" alt="" />
+          {canSignIn ? <SignInTicket signInHref={signInUrl('/tao', locale)} title={t('signIn.title')} description={t('signIn.lead')} /> : null}
+        </div>
+      </section>
 
-      <section className="stack" aria-labelledby="intro-templates">
-        <h2 id="intro-templates">{t('intro.templates')}</h2>
-        <p className="muted">{t('intro.count', { count: TEMPLATES.length })}</p>
+      <section className="poster-wall stack" aria-labelledby="intro-templates">
+        <div className="section-head">
+          <h2 id="intro-templates">{t('intro.templates')}</h2>
+          <p className="muted">{t('intro.count', { count: TEMPLATES.length })}</p>
+        </div>
         <ul className="template-cards">
           {TEMPLATES.map((tpl) => (
             <li key={tpl.id}>
@@ -56,15 +52,17 @@ export function IntroPage(): ReactNode {
         </ul>
       </section>
 
-      <FeatureList
-        id="how"
-        title={t('intro.how')}
-        items={FEATURES.map((id) => ({
-          id,
-          title: t(`features.${id}.title`),
-          description: t(`features.${id}.text`, { limit: DAILY_LIMIT, seconds: MAX_DURATION_SECONDS }),
-        }))}
-      />
+      <section className="stack" id="how" data-id="features" aria-labelledby="intro-how">
+        <h2 id="intro-how">{t('intro.how')}</h2>
+        <ol className="film-strip">
+          {FEATURES.map((id) => (
+            <li key={id} className="film-frame" data-id={`feature-${id}`}>
+              <h3 className="film-frame-title">{t(`features.${id}.title`)}</h3>
+              <p className="film-frame-text">{t(`features.${id}.text`, { limit: DAILY_LIMIT, seconds: MAX_DURATION_SECONDS })}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
     </div>
   );
 }

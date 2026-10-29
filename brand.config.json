@@ -4,9 +4,9 @@
   "shortName": "Clip",
   "description": "Chọn mẫu, gõ vài dòng, thêm ảnh rồi nhận về một video dọc ngắn để tải xuống hoặc chia sẻ.",
   "colors": {
-    "primary": "#6e56cf",
-    "background": "#f9f9fb",
-    "backgroundDark": "#111113"
+    "primary": "#c0182d",
+    "background": "#100b0c",
+    "backgroundDark": "#100b0c"
   },
   "icon": "brand/icon.svg",
   "iconMaskable": "brand/icon-maskable.svg",

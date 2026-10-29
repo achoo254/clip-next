@@ -1,15 +1,13 @@
 /**
- * `pnpm check:tokens` — design-token guard for the web app (copied from scribe-next/localman-next, which own the
- * same design system).
+ * `pnpm check:tokens` — design-token guard for the web app, which has its own single theme
+ * (apps/web/src/styles/tokens.css).
  *
- * 1. Literal scan: apps/web/src and apps/web/index.html must not contain colour literals (hex, rgb()/hsl()/…) or
- *    raw px spacing; those live only in the shared tokens (@achoo254/app-shell tokens.css, the app has none of
- *    its own). Allowlist and ignore marker are documented
+ * 1. Literal scan: apps/web/src (except tokens.css) and apps/web/index.html must not contain colour literals (hex,
+ *    rgb()/hsl()/…) or raw px spacing; those live only in tokens.css. Allowlist and ignore marker are documented
  *    in scripts/check-tokens/scan-literals.ts. The video templates (packages/templates/project) are artwork with
  *    their own colours and are not scanned.
- * 2. Token consistency: the OS-preference dark block and the forced dark block of the shared tokens are identical.
- * 3. Contrast: main text/background pairs meet WCAG 4.5:1 (UI parts 3:1) in light and dark; APCA Lc is printed as
- *    an advisory value.
+ * 2. Contrast: the text/background pairs of scripts/check-tokens/contrast-pairs.ts meet WCAG 4.5:1 (UI parts
+ *    3:1); APCA Lc is printed as an advisory value.
  *
  * Exits 1 on any failure, printing `file:line` for literal violations.
  */
@@ -17,9 +15,9 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { APCA_BODY_TEXT_LC, type ContrastResult, evaluatePairs } from './check-tokens/contrast.js';
-import { diffDarkBlocks, resolveThemes } from './check-tokens/parse-tokens.js';
+import { resolveRootTokens } from './check-tokens/parse-tokens.js';
 import { findLiteralViolations, type LiteralViolation } from './check-tokens/scan-literals.js';
-import { SHARED_TOKENS_FILE } from './check-tokens/shared-tokens.js';
+import { TOKENS_FILE } from './check-tokens/tokens-file.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WEB = path.join(ROOT, 'apps/web');
@@ -33,7 +31,7 @@ async function listSourceFiles(dir: string): Promise<string[]> {
     entries.map(async (entry) => {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) return listSourceFiles(full);
-      return SCANNED_EXTENSIONS.has(path.extname(entry.name)) ? [full] : [];
+      return SCANNED_EXTENSIONS.has(path.extname(entry.name)) && full !== TOKENS_FILE ? [full] : [];
     }),
   );
   return nested.flat();
@@ -59,23 +57,13 @@ async function main(): Promise<number> {
   const violations = await scanLiterals();
   if (violations.length > 0) {
     failed = true;
-    console.error(`✗ ${violations.length} design-token bypass(es) in web (use a token of @achoo254/app-shell tokens.css):`);
+    console.error(`✗ ${violations.length} design-token bypass(es) in web (use a token of apps/web/src/styles/tokens.css):`);
     for (const v of violations) console.error(`  ${v.file}:${v.line}  [${v.rule}]  ${v.match}`);
   } else {
     console.log('✓ No colour literals or raw px spacing in web');
   }
 
-  const themes = resolveThemes(await readFile(SHARED_TOKENS_FILE, 'utf8'));
-  const drift = diffDarkBlocks(themes);
-  if (drift.length > 0) {
-    failed = true;
-    console.error('✗ Dark token blocks drifted apart in the shared tokens.css:');
-    for (const line of drift) console.error(`  ${line}`);
-  } else {
-    console.log('✓ Dark blocks (media query and data-theme) are identical');
-  }
-
-  const results = [...evaluatePairs('light', themes.light), ...evaluatePairs('dark', themes.dark)];
+  const results = evaluatePairs('clip', resolveRootTokens(await readFile(TOKENS_FILE, 'utf8')));
   const failures = results.filter((r) => !r.pass);
   const lowApca = results.filter((r) => r.pass && r.kind === 'text' && Math.abs(r.apcaLc) < APCA_BODY_TEXT_LC);
   if (failures.length > 0) {
@@ -83,7 +71,7 @@ async function main(): Promise<number> {
     console.error(`✗ ${failures.length} contrast pair(s) below WCAG minimum:`);
     for (const r of failures) console.error(formatResult(r));
   } else {
-    console.log(`✓ ${results.length} contrast pairs meet WCAG (text 4.5:1, UI 3:1) in light and dark`);
+    console.log(`✓ ${results.length} contrast pairs meet WCAG (text 4.5:1, UI 3:1)`);
   }
   if (lowApca.length > 0) {
     console.warn(`! Advisory: ${lowApca.length} text pair(s) under APCA Lc ${APCA_BODY_TEXT_LC} (fine for labels/bold text, avoid for long body copy):`);

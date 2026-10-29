@@ -1,34 +1,24 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import {
-	diffDarkBlocks,
-	parseTokenBlocks,
-	resolveThemes,
-} from "./parse-tokens.js";
-import { SHARED_TOKENS_FILE } from "./shared-tokens.js";
+import { parseTokenBlocks, resolveRootTokens } from "./parse-tokens.js";
+import { TOKENS_FILE } from "./tokens-file.js";
 
 const SAMPLE = `
 /* header with { braces } inside a comment */
 :root { --c-bg: #fff; --c-text: #111; --radius-md: 12px; }
-@media (min-width:768px) { :root { --gutter: 24px } }
-@media (prefers-color-scheme:dark) {
-  :root:not([data-theme='light']) { --c-bg: #000; --c-text: #eee; }
-}
-:root[data-theme="dark"] { --c-bg: #000; --c-text: #eee }
+:root { --c-text: #222 }
 `;
 
 describe("parseTokenBlocks", () => {
 	it("records custom properties with their selector context", () => {
-		const blocks = parseTokenBlocks(SAMPLE);
+		const blocks = parseTokenBlocks(
+			`${SAMPLE}@media (min-width:768px) { :root { --gutter: 24px } }`,
+		);
 		expect(blocks.map((b) => b.context)).toEqual([
 			[":root"],
+			[":root"],
 			["@media (min-width: 768px)", ":root"],
-			[
-				"@media (prefers-color-scheme: dark)",
-				':root:not([data-theme="light"])',
-			],
-			[':root[data-theme="dark"]'],
 		]);
 		expect(blocks[0]?.tokens.get("--radius-md")).toBe("12px");
 	});
@@ -38,31 +28,25 @@ describe("parseTokenBlocks", () => {
 	});
 });
 
-describe("resolveThemes", () => {
-	it("layers dark overrides on top of light and ignores responsive blocks", () => {
-		const themes = resolveThemes(SAMPLE);
-		expect(themes.light.get("--c-bg")).toBe("#fff");
-		expect(themes.light.has("--gutter")).toBe(false);
-		expect(themes.dark.get("--c-bg")).toBe("#000");
-		expect(themes.dark.get("--radius-md")).toBe("12px");
-		expect(diffDarkBlocks(themes)).toEqual([]);
+describe("resolveRootTokens", () => {
+	it("merges the :root blocks, later ones winning", () => {
+		const tokens = resolveRootTokens(SAMPLE);
+		expect(tokens.get("--c-bg")).toBe("#fff");
+		expect(tokens.get("--c-text")).toBe("#222");
 	});
 
-	it("reports drift between the two dark blocks", () => {
-		const drifted = SAMPLE.replace(
-			':root[data-theme="dark"] { --c-bg: #000;',
-			':root[data-theme="dark"] { --c-bg: #010101;',
-		);
-		expect(diffDarkBlocks(resolveThemes(drifted))).toEqual([
-			"--c-bg: media=#000 forced=#010101",
-		]);
+	it("refuses a second theme or media-scoped tokens", () => {
+		expect(() =>
+			resolveRootTokens(`${SAMPLE}:root[data-theme="light"] { --c-bg: #fff }`),
+		).toThrow(/one theme/);
+		expect(() =>
+			resolveRootTokens(`${SAMPLE}@media (prefers-color-scheme: light) { :root { --c-bg: #fff } }`),
+		).toThrow(/one theme/);
 	});
 
-	it("parses the shared tokens.css with identical dark blocks", () => {
-		const css = readFileSync(SHARED_TOKENS_FILE, "utf8");
-		const themes = resolveThemes(css);
-		expect(themes.light.get("--c-primary")).toBe("#6550b9");
-		expect(themes.dark.get("--c-primary")).toBe("#baa7ff");
-		expect(diffDarkBlocks(themes)).toEqual([]);
+	it("reads the app's tokens.css", () => {
+		const tokens = resolveRootTokens(readFileSync(TOKENS_FILE, "utf8"));
+		expect(tokens.get("--c-red-solid")).toMatch(/^#[0-9a-f]{6}$/);
+		expect(tokens.get("--font-display")).toContain("Oswald");
 	});
 });

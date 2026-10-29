@@ -38,7 +38,7 @@ export function initialLocale(search: string, stored: Locale | undefined): Local
 interface I18n {
   readonly locale: Locale;
   readonly t: Translate;
-  /** Shows the app in `locale`; the footer's language switch has already stored the choice. */
+  /** Shows the app in `locale`; the header's language switch has already stored the choice. */
   setLocale(locale: Locale): void;
 }
 

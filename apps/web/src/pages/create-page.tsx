@@ -1,4 +1,3 @@
-import { SignInCard } from '@achoo254/app-shell';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import {
@@ -23,7 +22,8 @@ import { useAccount } from '../account';
 import { errorMessage } from '../error-message';
 import { FormatPicker } from './format-picker';
 import { useI18n } from '../i18n';
-import { SHELL_BRAND, useHere } from '../layout';
+import { useHere } from '../layout';
+import { SignInTicket } from '../sign-in-ticket';
 import { TemplatePreview } from '../preview/template-preview';
 import { TemplatePicker } from './template-picker';
 
@@ -272,8 +272,8 @@ export function CreatePage(): ReactNode {
               {busy ? t('create.rendering') : t('create.render')}
             </button>
           ) : me?.signInAvailable === true ? (
-            // Signed out: the shared sign-in card, back to this page (the template and its fields are in the URL).
-            <SignInCard brand={SHELL_BRAND} locale={locale} signInHref={signInUrl(here, locale)} title={t('create.signInToRender')} headingLevel={2} />
+            // Signed out: the sign-in ticket, back to this page (the template and its fields are in the URL).
+            <SignInTicket signInHref={signInUrl(here, locale)} title={t('create.signInToRender')} />
           ) : null}
         </form>
 

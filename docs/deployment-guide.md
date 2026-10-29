@@ -76,12 +76,13 @@ không bị mất video vì một lần deploy.
 **Render quá 9 phút:** worker giết cả nhóm tiến trình của hyperframes, đánh job `failed/timeout`, rồi tự thoát mã 1
 để systemd dọn sạch cgroup (kể cả Chrome mà hyperframes chạy trong nhóm tiến trình riêng) và khởi động worker mới.
 
-**CSP và script theme.** Mỗi trang có một script inline nhỏ trong `<head>` (script theme của gói
-`@achoo254/app-shell`, đặt `data-theme` trước lần vẽ đầu). `$clip_csp` trong site nginx cho phép đúng script đó bằng
-hash `sha256-…`; test `apps/web/vite-theme-bootstrap.test.ts` báo lỗi và in hash mới khi gói đổi script. Release cài
-site nginx đã đổi ngay sau khi đổi `app/`, nên web và CSP lên cùng lần. Sau release, kiểm header
-`Content-Security-Policy` trên `https://clip.hoandat.com/` có hash, và chọn Tối ở footer rồi tải lại trang: không
-nháy sáng, console không có lỗi CSP. Quay lại bản trước bằng tay không đổi nginx; hash thừa trong CSP vô hại.
+**CSP.** Clip có giao diện riêng với đúng một theme (tối, kiểu phòng chiếu phim; token ở
+`apps/web/src/styles/tokens.css`), không có nút đổi sáng/tối nên trang không có script inline nào: `script-src` của
+`$clip_csp` chỉ có `'self'` và beacon Cloudflare. Ngôn ngữ vẫn dùng chung cookie `hd_lang` với các app hoandat.com
+(`@achoo254/app-shell/preferences`). Release cài site nginx đã đổi ngay sau khi đổi `app/`, nên web và CSP lên cùng
+lần. Sau release, mở `https://clip.hoandat.com/`: console không có lỗi CSP. Quay lại bằng tay về bản còn dùng khung
+chung (có script theme inline) mà không đổi nginx thì script đó bị CSP chặn: trang vẫn chạy, chỉ theo sáng/tối của
+máy; muốn sạch thì cài lại site nginx của bản đó.
 
 **Quay lại bản trước bằng tay:** `cd /var/www/clip && rm -rf app && mv app.prev app && systemctl restart clip-server clip-worker`.
 

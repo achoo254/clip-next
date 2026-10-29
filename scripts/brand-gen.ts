@@ -4,7 +4,8 @@
  *
  * 1. brand/icon.svg and brand/icon-maskable.svg: the master embedded as WebP (the maskable one full-bleed on the
  *    tile colour, the artwork inside the central 80% circle), the inputs the shared brand tooling draws from;
- * 2. apps/web/public/clip-mark-128.webp: the header mark;
+ * 2. apps/web/public/clip-mark-128.webp: the header mark, and clip-mascot-384.webp: the mascot on the welcome and
+ *    sign-in pages;
  * 3. brand/generated/: the web manifest, PNG icons and favicon.ico (@achoo254/brand writeBrandFiles).
  *
  * Images are encoded and drawn with the installed Google Chrome through playwright-core (no image library, no
@@ -17,6 +18,7 @@ import { BRAND_GENERATED_DIR, BRAND_ROOT, loadClipBrand, MANIFEST_OPTIONS } from
 
 const MASTER = new URL('brand/app-icon-master-1024.png', BRAND_ROOT);
 const MARK = new URL('apps/web/public/clip-mark-128.webp', BRAND_ROOT);
+const MASCOT = new URL('apps/web/public/clip-mascot-384.webp', BRAND_ROOT);
 /** The icon tile's coral pink, behind the maskable icon so the artwork can sit inside the safe zone. */
 const TILE = '#f7537a';
 
@@ -63,6 +65,7 @@ async function main(): Promise<void> {
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">${note}<rect width="512" height="512" fill="${TILE}"/><image x="61" y="61" width="390" height="390" href="data:image/webp;base64,${icon}"/></svg>\n`,
     );
     await writeFile(MARK, await webp(page, master, 128, 0.92));
+    await writeFile(MASCOT, await webp(page, master, 384, 0.82));
   } finally {
     await browser.close();
   }
@@ -74,7 +77,7 @@ async function main(): Promise<void> {
     indent: 2,
     renderer: chromiumRenderer(launcher),
   });
-  console.log(`Wrote brand/icon.svg, brand/icon-maskable.svg, apps/web/public/clip-mark-128.webp and ${written.length} files to brand/generated/`);
+  console.log(`Wrote brand/icon.svg, brand/icon-maskable.svg, apps/web/public/clip-{mark-128,mascot-384}.webp and ${written.length} files to brand/generated/`);
 }
 
 main().catch((error: unknown) => {

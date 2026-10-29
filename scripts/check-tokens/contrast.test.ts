@@ -8,8 +8,8 @@ import {
 	parseHexColor,
 	wcagRatio,
 } from "./contrast.js";
-import { resolveThemes } from "./parse-tokens.js";
-import { SHARED_TOKENS_FILE } from "./shared-tokens.js";
+import { resolveRootTokens } from "./parse-tokens.js";
+import { TOKENS_FILE } from "./tokens-file.js";
 
 describe("colour maths", () => {
 	it("parses short and long hex", () => {
@@ -53,13 +53,9 @@ describe("evaluatePairs", () => {
 		expect(result?.ratio).toBeCloseTo(4.48, 2);
 	});
 
-	it("passes every main pair of the real tokens in light and dark", () => {
-		const css = readFileSync(SHARED_TOKENS_FILE, "utf8");
-		const themes = resolveThemes(css);
-		const failures = [
-			...evaluatePairs("light", themes.light),
-			...evaluatePairs("dark", themes.dark),
-		].filter((r) => !r.pass);
+	it("passes every pair of the real tokens", () => {
+		const tokens = resolveRootTokens(readFileSync(TOKENS_FILE, "utf8"));
+		const failures = evaluatePairs("clip", tokens).filter((r) => !r.pass);
 		expect(failures).toEqual([]);
 	});
 });

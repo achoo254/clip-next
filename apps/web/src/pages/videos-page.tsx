@@ -1,11 +1,11 @@
-import { SignInCard } from '@achoo254/app-shell';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { isTemplateId, templateById } from '@clip/templates';
 import { ApiError, downloadUrl, listJobs, signInUrl, videoUrl, type Job, type JobList } from '../api';
 import { useAccount } from '../account';
 import { formatTime } from '../format-time';
 import { useI18n } from '../i18n';
-import { SHELL_BRAND, useHere } from '../layout';
+import { useHere } from '../layout';
+import { SignInTicket } from '../sign-in-ticket';
 
 /** Job status is polled this often while a job is queued or rendering. */
 const POLL_MS = 3_000;
@@ -108,7 +108,7 @@ export function VideosPage(): ReactNode {
     return (
       <div className="stack">
         <h1>{t('videos.title')}</h1>
-        <SignInCard brand={SHELL_BRAND} locale={locale} signInHref={signInUrl(here, locale)} title={t('videos.signIn')} headingLevel={2} />
+        <SignInTicket signInHref={signInUrl(here, locale)} title={t('videos.signIn')} />
       </div>
     );
   }

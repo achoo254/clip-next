@@ -1,5 +1,5 @@
 /**
- * Minimal parser for `src/styles/tokens.css`. It only needs to
+ * Minimal parser for `apps/web/src/styles/tokens.css`. It only needs to
  * understand custom-property declarations grouped by their (possibly nested)
  * selector context, which is all the token file contains.
  */
@@ -12,19 +12,7 @@ export interface TokenBlock {
 	tokens: TokenMap;
 }
 
-export interface ThemeTokens {
-	light: TokenMap;
-	dark: TokenMap;
-	/** Dark overrides applied via `prefers-color-scheme` (block [2]). */
-	darkAuto: TokenMap;
-	/** Dark overrides applied via `data-theme="dark"` (block [3]). */
-	darkForced: TokenMap;
-}
-
 const ROOT = ":root";
-const DARK_MEDIA = "@media (prefers-color-scheme: dark)";
-const DARK_AUTO_SELECTOR = ':root:not([data-theme="light"])';
-const DARK_FORCED_SELECTOR = ':root[data-theme="dark"]';
 
 function normalise(prelude: string): string {
 	const collapsed = prelude
@@ -91,49 +79,22 @@ function contextIs(block: TokenBlock, expected: string[]): boolean {
 	);
 }
 
-function mergeInto(target: TokenMap, source: TokenMap): void {
-	for (const [name, value] of source) target.set(name, value);
-}
-
-/** Resolves the light and dark token sets the browser would compute. */
-export function resolveThemes(css: string): ThemeTokens {
-	const blocks = parseTokenBlocks(css);
-	const light: TokenMap = new Map();
-	const darkAuto: TokenMap = new Map();
-	const darkForced: TokenMap = new Map();
-
-	for (const block of blocks) {
-		if (contextIs(block, [ROOT])) mergeInto(light, block.tokens);
-		if (contextIs(block, [DARK_MEDIA, DARK_AUTO_SELECTOR])) {
-			mergeInto(darkAuto, block.tokens);
+/**
+ * The tokens the browser computes: every top-level `:root` block, later ones
+ * winning. Clip has one theme, so there are no dark or media-scoped blocks to
+ * layer; a token file that adds one fails here, where the contrast check
+ * would otherwise miss it.
+ */
+export function resolveRootTokens(css: string): TokenMap {
+	const tokens: TokenMap = new Map();
+	for (const block of parseTokenBlocks(css)) {
+		if (!contextIs(block, [ROOT])) {
+			throw new Error(
+				`tokens.css has tokens outside :root (${block.context.join(" ")}); Clip has one theme`,
+			);
 		}
-		if (contextIs(block, [DARK_FORCED_SELECTOR])) {
-			mergeInto(darkForced, block.tokens);
-		}
+		for (const [name, value] of block.tokens) tokens.set(name, value);
 	}
-	if (light.size === 0) throw new Error("tokens.css has no :root block");
-	if (darkForced.size === 0) {
-		throw new Error(`tokens.css has no ${DARK_FORCED_SELECTOR} block`);
-	}
-
-	const dark: TokenMap = new Map(light);
-	mergeInto(dark, darkForced);
-	return { light, dark, darkAuto, darkForced };
-}
-
-/** Lists tokens whose value differs between the two dark blocks. */
-export function diffDarkBlocks(themes: ThemeTokens): string[] {
-	const names = new Set([
-		...themes.darkAuto.keys(),
-		...themes.darkForced.keys(),
-	]);
-	const drift: string[] = [];
-	for (const name of names) {
-		const auto = themes.darkAuto.get(name);
-		const forced = themes.darkForced.get(name);
-		if (auto !== forced) {
-			drift.push(`${name}: media=${auto ?? "∅"} forced=${forced ?? "∅"}`);
-		}
-	}
-	return drift.sort();
+	if (tokens.size === 0) throw new Error("tokens.css has no :root block");
+	return tokens;
 }

@@ -1,13 +1,12 @@
-import { SignInCard } from '@achoo254/app-shell';
 import { useEffect, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { safeReturnPath, signInUrl } from '../api';
 import { useAccount } from '../account';
 import { useI18n } from '../i18n';
-import { SHELL_BRAND } from '../layout';
+import { SignInTicket } from '../sign-in-ticket';
 
 /**
- * /login, where the header's sign-in pill goes: the shared sign-in card. Its link is the server's route to the
+ * /login, where the header's sign-in pill goes: the mascot over the sign-in ticket. Its link is the server's route to the
  * account service, back to the page the visitor came from (`?return=`).
  */
 export function LoginPage(): ReactNode {
@@ -23,12 +22,15 @@ export function LoginPage(): ReactNode {
   }, [me, navigate, returnTo]);
 
   return (
-    <SignInCard brand={SHELL_BRAND} locale={locale} signInHref={signInUrl(returnTo, locale)} title={t('signIn.title')} description={t('signIn.lead')}>
-      {me !== null && !me.signInAvailable ? (
-        <p className="alert alert-warning" role="status" data-id="sign-in-unavailable">
-          {t('auth.unavailable')}
-        </p>
-      ) : null}
-    </SignInCard>
+    <div className="login" data-id="login">
+      <img className="login-mascot" src="/clip-mascot-384.webp" width="192" height="192" alt="" />
+      <SignInTicket signInHref={signInUrl(returnTo, locale)} title={t('signIn.title')} description={t('signIn.lead')} headingLevel={1}>
+        {me !== null && !me.signInAvailable ? (
+          <p className="alert alert-warning" role="status" data-id="sign-in-unavailable">
+            {t('auth.unavailable')}
+          </p>
+        ) : null}
+      </SignInTicket>
+    </div>
   );
 }

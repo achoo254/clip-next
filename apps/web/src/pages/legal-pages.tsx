@@ -119,7 +119,7 @@ export function TermsPage(): ReactNode {
 const CREDITS: readonly { readonly what: string; readonly who: string; readonly licence: string; readonly url: string }[] = [
   { what: 'hyperframes, @hyperframes/player, @hyperframes/core 0.8.201', who: 'HeyGen', licence: 'Apache License 2.0', url: 'https://github.com/heygen-com/hyperframes' },
   { what: 'Be Vietnam Pro', who: 'The Be Vietnam Pro Project Authors', licence: 'SIL Open Font License 1.1', url: 'https://github.com/google/fonts/tree/main/ofl/bevietnampro' },
-  { what: 'Inter, JetBrains Mono', who: 'Rasmus Andersson; JetBrains', licence: 'SIL Open Font License 1.1', url: 'https://fontsource.org' },
+  { what: 'Oswald', who: 'The Oswald Project Authors', licence: 'SIL Open Font License 1.1', url: 'https://github.com/google/fonts/tree/main/ofl/oswald' },
   {
     what: 'Fetch Dance, Bicycle, Chillin Poupi, Good Fellow',
     who: 'Komiku (Loyalty Freak Music), album "Poupi\'s Incredible Adventures"',

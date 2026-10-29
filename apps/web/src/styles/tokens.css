@@ -1,0 +1,76 @@
+/* Clip's own design tokens: one designed theme, a screening room at night. Dark velvet and black, a red marquee and
+   warm amber bulbs, ivory text. This file is the only place in apps/web/src that may hold colour literals or raw px
+   spacing (`pnpm check:tokens` scans everything else and checks the text/background pairs of this file against
+   WCAG; scripts/check-tokens/contrast-pairs.ts lists them). */
+:root {
+  color-scheme: dark;
+
+  /* the room */
+  --c-bg: #100b0c;
+  --c-bg-deep: #070506;
+  --c-surface: #1c1415;
+  --c-surface-raised: #271c1d;
+  --c-surface-subtle: #140e0f;
+  --c-border: #3f2e30;
+  --c-border-strong: #8a6d6f;
+  --c-velvet: #5c0f1b;
+  --c-velvet-dark: #22050a;
+
+  /* text */
+  --c-text: #fbf2e4;
+  --c-text-muted: #cdb9a4;
+
+  /* marquee red: decoration and glow; the solid one carries ivory text */
+  --c-red: #ef3340;
+  --c-red-solid: #c0182d;
+  --c-red-solid-hover: #a51326;
+  --c-red-text: #ff8790;
+  --c-on-red: #fff6ea;
+
+  /* bulb amber: accents, pressed chips, focus */
+  --c-amber: #ffc247;
+  --c-amber-hover: #ffd477;
+  --c-on-amber: #1d1205;
+  --c-focus: #ffd477;
+
+  /* states */
+  --c-success: #79e0a5;
+  --c-error: #ff8790;
+  --c-warning: #ffc247;
+
+  /* light and shadow */
+  --c-glow-red: rgb(239 51 64 / 0.45);
+  --c-glow-amber: rgb(255 194 71 / 0.55);
+  --c-beam: rgb(255 214 140 / 0.11);
+  --c-scrim: rgb(7 5 6 / 0.82);
+  --shadow-poster: 0 18px 36px -14px rgb(0 0 0 / 0.85), 0 2px 6px rgb(0 0 0 / 0.5);
+  --shadow-card: 0 24px 48px -20px rgb(0 0 0 / 0.9);
+  --shadow-glow-red: 0 10px 30px -8px rgb(239 51 64 / 0.6);
+
+  /* type: Oswald (posters, marquee) and Be Vietnam Pro (reading), both self-hosted with the Vietnamese subset */
+  --font-display: 'Oswald', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  --font-sans: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* space, shape, time */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 56px;
+  --space-10: 72px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-full: 999px;
+  --container: 1180px;
+  --gutter: 16px;
+  --header-h: 68px;
+  --dur-fast: 150ms;
+  --dur-base: 260ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}

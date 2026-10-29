@@ -2,6 +2,16 @@ import type { Locale } from '@clip/templates';
 
 /** Every UI string, Vietnamese first (the default), English second. `{name}` placeholders are filled by `t`. */
 const vi = {
+  'chrome.skip': 'Bỏ qua tới nội dung',
+  'chrome.nav': 'Điều hướng',
+  'chrome.signIn': 'Đăng nhập',
+  'chrome.signInWith': 'Đăng nhập bằng {domain}',
+  'chrome.signInNote': 'Dùng tài khoản {domain}: đăng nhập bằng Google hoặc GitHub. App không bao giờ thấy mật khẩu của bạn.',
+  'chrome.ecosystem': 'Một app của {domain}',
+  'chrome.privacy': 'Quyền riêng tư',
+  'chrome.terms': 'Điều khoản',
+  'chrome.footLinks': 'Liên kết cuối trang',
+  'chrome.language': 'Ngôn ngữ',
   'nav.create': 'Tạo video',
   'nav.videos': 'Video của tôi',
   'auth.signOut': 'Đăng xuất',
@@ -103,6 +113,16 @@ const vi = {
 export type MessageKey = keyof typeof vi;
 
 const en: Record<MessageKey, string> = {
+  'chrome.skip': 'Skip to content',
+  'chrome.nav': 'Navigation',
+  'chrome.signIn': 'Sign in',
+  'chrome.signInWith': 'Sign in with {domain}',
+  'chrome.signInNote': 'Use your {domain} account: sign in with Google or GitHub. The app never sees your password.',
+  'chrome.ecosystem': 'An app from {domain}',
+  'chrome.privacy': 'Privacy',
+  'chrome.terms': 'Terms',
+  'chrome.footLinks': 'Footer links',
+  'chrome.language': 'Language',
   'nav.create': 'Create',
   'nav.videos': 'My videos',
   'auth.signOut': 'Sign out',
