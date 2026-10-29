@@ -4,6 +4,8 @@ import '@fontsource/be-vietnam-pro/600.css';
 import '@fontsource/be-vietnam-pro/800.css';
 import '@fontsource/oswald/500.css';
 import '@fontsource/oswald/700.css';
+// The shared account menu's rules (classes `shell-*` only), before Clip's own CSS so Clip's rules win.
+import '@achoo254/app-shell/app-shell.css';
 import './styles/tokens.css';
 import './styles/app.css';
 import { StrictMode, type ReactNode } from 'react';

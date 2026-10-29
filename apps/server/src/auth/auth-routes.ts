@@ -1,12 +1,14 @@
 // Sign-in with a hoandat.com account: /auth/login sends the browser to auth.hoandat.com (Code + PKCE, scope
-// openid), /auth/callback exchanges the code (client_secret_basic), opens a Clip session and comes back to the
-// page the person started from. Off until AUTH_CLIENT_SECRET is set.
+// openid profile email), /auth/callback exchanges the code (client_secret_basic), reads the name, picture and
+// email from the userinfo endpoint, opens a Clip session and comes back to the page the person started from. Off
+// until AUTH_CLIENT_SECRET is set.
 import type { Db } from '@clip/db';
 import express, { type RequestHandler, type Router } from 'express';
 import type { AuthConfig, ServerConfig } from '../config';
 import { HttpError } from '../http-error';
 import { codeChallenge, newLoginState, openState, safeReturnPath, sealState, subFromIdToken, withLoginResult } from './oidc-login';
-import { accountForSub, clearSessionCookie, createSession, deleteSession, readCookie, readSessionToken, sessionAccount, setSessionCookie } from './session';
+import { accountForSub, accountProfile, clearSessionCookie, createSession, deleteSession, readCookie, readSessionToken, sessionAccount, setSessionCookie } from './session';
+import { EMPTY_PROFILE, fetchProfile, type AccountProfile } from './userinfo';
 
 const STATE_COOKIE = 'clip_login';
 
@@ -14,12 +16,19 @@ interface Discovery {
   readonly issuer: string;
   readonly authorization_endpoint: string;
   readonly token_endpoint: string;
+  /** Missing at an IdP without userinfo: sign-in still works, with no name or picture. */
+  readonly userinfo_endpoint?: string;
 }
 
 function isDiscovery(value: unknown): value is Discovery {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
-  return typeof v.issuer === 'string' && typeof v.authorization_endpoint === 'string' && typeof v.token_endpoint === 'string';
+  return (
+    typeof v.issuer === 'string' &&
+    typeof v.authorization_endpoint === 'string' &&
+    typeof v.token_endpoint === 'string' &&
+    (v.userinfo_endpoint === undefined || typeof v.userinfo_endpoint === 'string')
+  );
 }
 
 /** The IdP's endpoints, cached for an hour. */
@@ -36,7 +45,19 @@ function discoveryCache(issuer: string): () => Promise<Discovery> {
   };
 }
 
-async function exchangeCode(auth: AuthConfig, discovery: Discovery, code: string, verifier: string): Promise<{ status: number; idToken: string | null }> {
+interface TokenResult {
+  readonly status: number;
+  readonly idToken: string | null;
+  readonly accessToken: string | null;
+}
+
+function stringField(body: unknown, key: string): string | null {
+  if (typeof body !== 'object' || body === null) return null;
+  const value = (body as Record<string, unknown>)[key];
+  return typeof value === 'string' && value !== '' ? value : null;
+}
+
+async function exchangeCode(auth: AuthConfig, discovery: Discovery, code: string, verifier: string): Promise<TokenResult> {
   const basic = Buffer.from(`${encodeURIComponent(auth.clientId)}:${encodeURIComponent(auth.clientSecret)}`).toString('base64');
   const res = await fetch(discovery.token_endpoint, {
     method: 'POST',
@@ -45,8 +66,21 @@ async function exchangeCode(auth: AuthConfig, discovery: Discovery, code: string
     signal: AbortSignal.timeout(10_000),
   });
   const body: unknown = await res.json().catch(() => null);
-  const idToken = typeof body === 'object' && body !== null && typeof (body as { id_token?: unknown }).id_token === 'string' ? (body as { id_token: string }).id_token : null;
-  return { status: res.status, idToken: res.ok ? idToken : null };
+  if (!res.ok) return { status: res.status, idToken: null, accessToken: null };
+  return { status: res.status, idToken: stringField(body, 'id_token'), accessToken: stringField(body, 'access_token') };
+}
+
+/** The profile from userinfo; null (keep the stored one) when the IdP has no endpoint or the call fails. */
+async function profileAtSignIn(discovery: Discovery, accessToken: string | null, sub: string): Promise<AccountProfile | null> {
+  if (!discovery.userinfo_endpoint || !accessToken) return null;
+  try {
+    const profile = await fetchProfile(discovery.userinfo_endpoint, accessToken, sub);
+    if (!profile) console.warn('userinfo answered for another subject; profile not updated');
+    return profile;
+  } catch (error) {
+    console.warn(`userinfo failed: ${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  }
 }
 
 export function authRoutes(config: ServerConfig, db: Db): Router {
@@ -71,7 +105,7 @@ export function authRoutes(config: ServerConfig, db: Db): Router {
         client_id: auth.clientId,
         redirect_uri: auth.redirectUri,
         response_type: 'code',
-        scope: 'openid',
+        scope: 'openid profile email',
         state: s.state,
         nonce: s.nonce,
         code_challenge: codeChallenge(s.verifier),
@@ -103,7 +137,7 @@ export function authRoutes(config: ServerConfig, db: Db): Router {
         return;
       }
       const now = new Date();
-      const accountId = await accountForSub(db, sub, now);
+      const accountId = await accountForSub(db, sub, now, await profileAtSignIn(d, token.accessToken, sub));
       setSessionCookie(res, config, await createSession(db, accountId, now));
       res.redirect(s.returnTo);
     } catch (error) {
@@ -122,7 +156,8 @@ export function authRoutes(config: ServerConfig, db: Db): Router {
   router.get('/api/me', async (req, res) => {
     const token = readSessionToken(req, config);
     const accountId = token ? await sessionAccount(db, token, new Date()) : null;
-    res.json({ signedIn: accountId !== null, signInAvailable: auth !== null });
+    const profile = accountId ? await accountProfile(db, accountId) : EMPTY_PROFILE;
+    res.json({ signedIn: accountId !== null, signInAvailable: auth !== null, ...profile });
   });
 
   return router;

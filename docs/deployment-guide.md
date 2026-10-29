@@ -78,7 +78,8 @@ không bị mất video vì một lần deploy.
 
 **CSP.** Clip có giao diện riêng với đúng một theme (tối, kiểu phòng chiếu phim; token ở
 `apps/web/src/styles/tokens.css`), không có nút đổi sáng/tối nên trang không có script inline nào: `script-src` của
-`$clip_csp` chỉ có `'self'` và beacon Cloudflare. Ngôn ngữ vẫn dùng chung cookie `hd_lang` với các app hoandat.com
+`$clip_csp` chỉ có `'self'` và beacon Cloudflare. `img-src` thêm `https://lh3.googleusercontent.com` và
+`https://avatars.githubusercontent.com` cho ảnh đại diện (từ IdP) trong menu tài khoản trên header. Ngôn ngữ vẫn dùng chung cookie `hd_lang` với các app hoandat.com
 (`@achoo254/app-shell/preferences`). Release cài site nginx đã đổi ngay sau khi đổi `app/`, nên web và CSP lên cùng
 lần. Sau release, mở `https://clip.hoandat.com/`: console không có lỗi CSP. Quay lại bằng tay về bản còn dùng khung
 chung (có script theme inline) mà không đổi nginx thì script đó bị CSP chặn: trang vẫn chạy, chỉ theo sáng/tối của

@@ -4,8 +4,15 @@ import { check, index, integer, jsonb, pgTable, real, text, timestamp, uniqueInd
 /** A hoandat.com account that signed in here, known only by the IdP's subject. */
 export const accounts = pgTable('accounts', {
   id: uuid('id').primaryKey().defaultRandom(),
-  /** `sub` of the ID token from auth.hoandat.com: the only thing Clip learns about the person. */
+  /** `sub` of the ID token from auth.hoandat.com: the account's identity. */
   sub: text('sub').notNull().unique(),
+  /**
+   * Display name, picture URL (https only) and email from the IdP's userinfo, refreshed at every sign-in and shown
+   * only to the person in the header's account menu. Null until the first sign-in that returned them.
+   */
+  name: text('name'),
+  picture: text('picture'),
+  email: text('email'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
 });
 

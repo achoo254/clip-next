@@ -9,7 +9,7 @@ hoandat.com; app thuộc tầng giải trí của hệ sinh thái `*-next`.
 | Thư mục | Vai trò |
 |---|---|
 | `apps/web` (`@clip/web`) | React 19 + Vite: trang giới thiệu, tạo video (xem trước bằng `@hyperframes/player`, không tốn server), "Video của tôi", trang pháp lý. Giao diện riêng kiểu rạp chiếu phim cho mọi trang (header, footer, vé đăng nhập tự viết; một theme tối, token ở `src/styles/tokens.css`, font Oswald + Be Vietnam Pro tự host); ngôn ngữ vẫn dùng chung cookie `hd_lang` với các app hoandat.com |
-| `apps/server` (`@clip/server`) | Express 5: đăng nhập BFF với auth-next (client `clip-web`, Code + PKCE, `client_secret_basic`, scope `openid`), phiên `__Host-` (token opaque, chỉ lưu hash), nhận ảnh và xếp hàng render, kiểm quyền rồi giao file cho nginx (`X-Accel-Redirect`) |
+| `apps/server` (`@clip/server`) | Express 5: đăng nhập BFF với auth-next (client `clip-web`, Code + PKCE, `client_secret_basic`, scope `openid profile email`; tên, ảnh đại diện, email lấy từ userinfo mỗi lần đăng nhập, lưu ở `accounts` để hiện menu tài khoản `AccountMenu` của `@achoo254/app-shell` trên header), phiên `__Host-` (token opaque, chỉ lưu hash), nhận ảnh và xếp hàng render, kiểm quyền rồi giao file cho nginx (`X-Accel-Redirect`) |
 | `apps/worker` (`@clip/worker`) | Lấy job từ hàng đợi Postgres (`FOR UPDATE SKIP LOCKED`), mỗi lần một job; `src/render.ts` là module duy nhất gọi `hyperframes` (ghim 0.8.201) |
 | `packages/templates` (`@clip/templates`) | Ba mẫu video (composition HTML của hyperframes trong `project/`), schema chữ/ảnh của từng mẫu, kiểm tra đầu vào dùng chung cho web, server, worker |
 | `packages/db` (`@clip/db`) | Schema Drizzle, migration, truy vấn hàng đợi và giới hạn, bố cục thư mục media |

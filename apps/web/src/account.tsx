@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { getMe, signOut as apiSignOut, type Me } from './api';
+import { getMe, signOut as apiSignOut, signedOut, type Me } from './api';
 
 interface Account {
   /** Null while the first check runs. */
@@ -19,7 +19,7 @@ export function AccountProvider({ children }: { readonly children: ReactNode }):
         if (live) setMe(value);
       })
       .catch(() => {
-        if (live) setMe({ signedIn: false, signInAvailable: false });
+        if (live) setMe(signedOut(false));
       });
     return () => {
       live = false;
@@ -27,7 +27,7 @@ export function AccountProvider({ children }: { readonly children: ReactNode }):
   }, []);
   const signOut = useCallback(async () => {
     await apiSignOut().catch(() => null);
-    setMe((current) => ({ signedIn: false, signInAvailable: current?.signInAvailable ?? true }));
+    setMe((current) => signedOut(current?.signInAvailable ?? true));
   }, []);
   const value = useMemo(() => ({ me, signOut }), [me, signOut]);
   return <AccountContext value={value}>{children}</AccountContext>;

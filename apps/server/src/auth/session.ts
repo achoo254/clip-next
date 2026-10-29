@@ -4,6 +4,7 @@ import { accounts, SESSION_ABSOLUTE_MS, SESSION_IDLE_MS, sessions, type Db } fro
 import { eq, sql } from 'drizzle-orm';
 import type { CookieOptions, Response } from 'express';
 import type { ServerConfig } from '../config';
+import { EMPTY_PROFILE, type AccountProfile } from './userinfo';
 
 /** Refresh `last_seen_at` at most this often to avoid a write on every request. */
 const TOUCH_INTERVAL_MS = 60 * 1000;
@@ -13,15 +14,28 @@ export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-/** The account of an IdP subject, created on its first sign-in. */
-export async function accountForSub(db: Db, sub: string, now: Date): Promise<string> {
+/**
+ * The account of an IdP subject, created on its first sign-in. A profile from this sign-in replaces the stored one
+ * (a picture removed at the IdP disappears here too); null (userinfo failed) keeps what was stored.
+ */
+export async function accountForSub(db: Db, sub: string, now: Date, profile: AccountProfile | null = null): Promise<string> {
+  const values = profile ? { name: profile.name, picture: profile.picture, email: profile.email } : {};
   const [row] = await db
     .insert(accounts)
-    .values({ sub, createdAt: now })
-    .onConflictDoUpdate({ target: accounts.sub, set: { sub: sql`excluded.sub` } })
+    .values({ sub, createdAt: now, ...values })
+    .onConflictDoUpdate({ target: accounts.sub, set: profile ? values : { sub: sql`excluded.sub` } })
     .returning({ id: accounts.id });
   if (!row) throw new Error('account upsert returned no row');
   return row.id;
+}
+
+/** Name, picture and email stored for an account (all null for one that never sent them). */
+export async function accountProfile(db: Db, accountId: string): Promise<AccountProfile> {
+  const [row] = await db
+    .select({ name: accounts.name, picture: accounts.picture, email: accounts.email })
+    .from(accounts)
+    .where(eq(accounts.id, accountId));
+  return row ?? EMPTY_PROFILE;
 }
 
 /** Opens a session; returns the opaque token for the cookie (never stored). */

@@ -342,6 +342,61 @@ button {
   background: var(--c-amber-hover);
   color: var(--c-on-amber);
 }
+/* The shared account menu (@achoo254/app-shell, `.shell-account*`) reads the shared token names; Clip does not load
+   the shared tokens.css (its names would override this theme), so the ones the menu needs are mapped onto Clip's
+   own tokens, only inside the menu. */
+.shell-account {
+  --c-primary: var(--c-focus);
+  --c-primary-solid: var(--c-red-solid);
+  --c-on-primary: var(--c-on-red);
+  --c-border-subtle: var(--c-border);
+  --c-icon-muted: var(--c-text-muted);
+  --font-mono: var(--font-display);
+  --ease-standard: var(--ease-out);
+  --shadow-lg: var(--shadow-card);
+  --icon-stroke: 1.75;
+}
+/* The shared account menu, dressed as a marquee pill: round avatar, Oswald name, a dark velvet panel. */
+.shell-account-trigger {
+  min-height: 44px;
+  padding: 0 var(--space-3) 0 var(--space-1);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--c-surface) 70%, transparent);
+  color: var(--c-text);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+.shell-account-trigger:hover,
+.shell-account[open] > .shell-account-trigger {
+  border-color: var(--c-border-strong);
+  background: var(--c-surface-raised);
+}
+.shell-account-trigger .shell-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 0 2px var(--c-amber);
+}
+.shell-account-name {
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+.shell-account-panel {
+  border-color: var(--c-border-strong);
+  background: var(--c-surface);
+}
+.shell-account-item:hover {
+  color: var(--c-text);
+  background: var(--c-surface-raised);
+}
+@media (max-width: 639px) {
+  .shell-account-trigger {
+    padding: 0 var(--space-2) 0 var(--space-1);
+  }
+}
 @media (max-width: 379px) {
   .brand-mark {
     width: 36px;

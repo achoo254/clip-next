@@ -1,9 +1,9 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AccountProvider } from './account';
-import { loginPageHref, safeReturnPath, signInUrl, type Me } from './api';
+import { loginPageHref, safeReturnPath, signedOut, signInUrl, type Me } from './api';
 import { I18nProvider } from './i18n';
 import { Layout } from './layout';
 import { IntroPage } from './pages/intro-page';
@@ -14,11 +14,16 @@ function clearPreferences(): void {
   window.localStorage.clear();
 }
 
-function answerMe(me: Me): void {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async () => new Response(JSON.stringify(me), { status: 200, headers: { 'Content-Type': 'application/json' } })),
+/** /api/me answers `me` (profile fields null unless given); sign-out answers 204. Returns the fetch mock. */
+function answerMe(me: Pick<Me, 'signedIn' | 'signInAvailable'> & Partial<Me>): ReturnType<typeof vi.fn> {
+  const body: Me = { ...signedOut(me.signInAvailable), ...me };
+  const fetchMock = vi.fn(async (path: string) =>
+    path === '/auth/logout'
+      ? new Response(null, { status: 204 })
+      : new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } }),
   );
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
 }
 
 function show(path: string, page: ReactNode): void {
@@ -121,18 +126,54 @@ describe('sign-in page and signed in', () => {
     expect(document.querySelector('[data-id=public-sign-in]')?.getAttribute('aria-current')).toBe('page');
   });
 
-  it('offers sign-out instead of sign-in', async () => {
-    answerMe({ signedIn: true, signInAvailable: true });
+  it('shows the account menu with the picture and name instead of sign-in, and signs out from it', async () => {
+    const fetchMock = answerMe({
+      signedIn: true,
+      signInAvailable: true,
+      name: 'Lan Anh',
+      email: 'lan@example.com',
+      picture: 'https://lh3.googleusercontent.com/a/abc',
+    });
     show('/video', <p>Body</p>);
-    expect(await screen.findByRole('button', { name: 'Đăng xuất' })).not.toBeNull();
+    const menu = await waitFor(() => {
+      const element = document.querySelector('[data-id=app-header] [data-id=account-menu]');
+      if (!element) throw new Error('no account menu yet');
+      return element;
+    });
     expect(document.querySelector('[data-id=public-sign-in]')).toBeNull();
     expect(document.querySelector('[data-id=nav-videos]')?.getAttribute('aria-current')).toBe('page');
+    expect(menu.querySelector('[data-id=topbar-account] .shell-account-name')?.textContent).toBe('Lan Anh');
+    const avatar = menu.querySelector('img.shell-avatar');
+    expect(avatar?.getAttribute('src')).toBe('https://lh3.googleusercontent.com/a/abc');
+    expect(avatar?.getAttribute('referrerpolicy')).toBe('no-referrer');
+    expect(menu.querySelector('.shell-account-head-email')?.textContent).toBe('lan@example.com');
+    expect(menu.querySelector('[data-id=account-menu-idp-email]')?.getAttribute('href')).toBe('https://auth.hoandat.com/account#account-email');
+
+    fireEvent.click(menu.querySelector('[data-id=account-menu-sign-out]') as HTMLElement);
+    await screen.findByRole('link', { name: 'Đăng nhập' });
+    expect(fetchMock).toHaveBeenCalledWith('/auth/logout', expect.objectContaining({ method: 'POST' }));
+    expect(document.querySelector('[data-id=account-menu]')).toBeNull();
+  });
+
+  it('shows the initial and a fallback name for an account that has not sent its profile yet', async () => {
+    answerMe({ signedIn: true, signInAvailable: true });
+    show('/video', <p>Body</p>);
+    const trigger = await waitFor(() => {
+      const element = document.querySelector('[data-id=topbar-account]');
+      if (!element) throw new Error('no account menu yet');
+      return element;
+    });
+    expect(trigger.querySelector('.shell-account-name')?.textContent).toBe('Tài khoản');
+    expect(trigger.querySelector('img')).toBeNull();
+    expect(trigger.querySelector('.shell-avatar-initial')?.getAttribute('data-initial')).toBe('T');
   });
 
   it('keeps both header links on every screen size, in one navigation', async () => {
-    answerMe({ signedIn: true, signInAvailable: true });
+    answerMe({ signedIn: true, signInAvailable: true, name: 'Lan Anh' });
     show('/tao', <p>Body</p>);
-    await screen.findByRole('button', { name: 'Đăng xuất' });
+    await waitFor(() => {
+      if (!document.querySelector('[data-id=account-menu]')) throw new Error('no account menu yet');
+    });
     const nav = screen.getByRole('navigation', { name: 'Điều hướng' });
     expect(nav.querySelector('[data-id=nav-create]')?.getAttribute('href')).toBe('/tao');
     expect(nav.querySelector('[data-id=nav-create]')?.getAttribute('aria-current')).toBe('page');

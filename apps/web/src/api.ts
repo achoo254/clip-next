@@ -34,6 +34,15 @@ export interface JobList {
 export interface Me {
   readonly signedIn: boolean;
   readonly signInAvailable: boolean;
+  /** From the account service at the last sign-in; null when signed out or never sent. */
+  readonly name: string | null;
+  readonly picture: string | null;
+  readonly email: string | null;
+}
+
+/** The answer when not signed in (or when /api/me could not be read). */
+export function signedOut(signInAvailable: boolean): Me {
+  return { signedIn: false, signInAvailable, name: null, picture: null, email: null };
 }
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<T> {

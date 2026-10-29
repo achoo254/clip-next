@@ -1,5 +1,6 @@
+import { AccountMenu } from '@achoo254/app-shell';
 import { writePreference } from '@achoo254/app-shell/preferences';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router';
 import type { Locale } from '@clip/templates';
 import { LOGIN_PATH, loginPageHref } from './api';
@@ -47,17 +48,34 @@ function LanguageSwitch(): ReactNode {
   );
 }
 
-/** Signed in: sign out. Signed out: the sign-in pill to /login, unless sign-in is not configured on this server. */
+/** The account pages of the account service, which the menu links to in a new tab. */
+const IDP_ACCOUNT_URL = `${brand.primaryTenant.issuer}/account`;
+
+/**
+ * Signed in: the shared account menu (picture or initial and name; sign-out inside). Signed out: the sign-in pill to
+ * /login, unless sign-in is not configured on this server.
+ */
 function AccountControl(): ReactNode {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { me, signOut } = useAccount();
   const { pathname } = useLocation();
   const here = useHere();
+  const [signingOut, setSigningOut] = useState(false);
   if (me?.signedIn === true) {
     return (
-      <button type="button" className="header-pill" onClick={() => void signOut()} data-id="sign-out">
-        {t('auth.signOut')}
-      </button>
+      <AccountMenu
+        user={{ name: me.name, email: me.email, picture: me.picture }}
+        locale={locale}
+        domain={brand.primaryTenant.domain}
+        idpAccountUrl={IDP_ACCOUNT_URL}
+        signOut={{
+          busy: signingOut,
+          onClick: () => {
+            setSigningOut(true);
+            void signOut().finally(() => setSigningOut(false));
+          },
+        }}
+      />
     );
   }
   // Still checking, or no sign-in here: no pill that would only come back with "not available".

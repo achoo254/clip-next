@@ -22,9 +22,18 @@ export function PrivacyPage(): ReactNode {
           <p>Trang này nói {name} lưu gì về bạn, vì sao, và bao lâu.</p>
           <h2>Tài khoản</h2>
           <p>
-            Bạn đăng nhập bằng tài khoản {account}. {name} chỉ nhận một mã định danh tài khoản (không nhận email, tên hay ảnh đại diện) và
-            một cookie phiên đăng nhập. Cookie này chỉ dùng để giữ bạn đăng nhập, hết hạn sau 30 ngày (hoặc sau 7 ngày không dùng); phiên
-            hết hạn bị xoá khỏi máy chủ.
+            Bạn đăng nhập bằng tài khoản {account}. Mỗi lần bạn đăng nhập, {name} nhận từ {account} mã định danh tài khoản, tên hiển thị,
+            địa chỉ ảnh đại diện và email của bạn, rồi lưu cùng tài khoản trên máy chủ của {name}. Tên, ảnh và email chỉ dùng để hiện
+            trong menu tài khoản ở đầu trang, chỉ bạn thấy; {name} không gửi thư tới email đó và không chia sẻ cho ai. Lần đăng nhập
+            sau, chúng được thay bằng thông tin mới nhất từ {account} (đổi tên hay ảnh ở đó thì ở đây cũng đổi theo).
+          </p>
+          <p>
+            {name} chỉ lưu địa chỉ của ảnh đại diện, không lưu chính tấm ảnh: trình duyệt của bạn tải ảnh thẳng từ Google hoặc GitHub
+            (nơi bạn dùng để đăng nhập) và không gửi kèm địa chỉ trang bạn đang xem.
+          </p>
+          <p>
+            {name} đặt một cookie phiên đăng nhập, chỉ dùng để giữ bạn đăng nhập. Cookie hết hạn sau 30 ngày (hoặc sau 7 ngày không
+            dùng); phiên hết hạn bị xoá khỏi máy chủ.
           </p>
           <h2>Chữ và ảnh bạn gửi</h2>
           <p>
@@ -43,9 +52,19 @@ export function PrivacyPage(): ReactNode {
           <p>This page says what {name} keeps about you, why, and for how long.</p>
           <h2>Account</h2>
           <p>
-            You sign in with your {account} account. {name} receives only an account identifier (no email, name or picture) and sets
-            one session cookie, used only to keep you signed in; it expires after 30 days (or 7 days unused), and expired sessions are
-            deleted from the server.
+            You sign in with your {account} account. Each time you sign in, {name} receives your account identifier, display name,
+            picture address and email from {account} and stores them with your account on the {name} server. The name, picture and
+            email are used only to show the account menu at the top of the page, to you alone; {name} sends no mail to that address
+            and shares them with no one. At your next sign-in they are replaced with the latest details from {account} (change your
+            name or picture there and it changes here too).
+          </p>
+          <p>
+            {name} stores only the address of your picture, not the picture itself: your browser loads it straight from Google or
+            GitHub (whichever you sign in with) without sending the address of the page you are on.
+          </p>
+          <p>
+            {name} sets one session cookie, used only to keep you signed in. It expires after 30 days (or 7 days unused), and expired
+            sessions are deleted from the server.
           </p>
           <h2>Text and photos you send</h2>
           <p>

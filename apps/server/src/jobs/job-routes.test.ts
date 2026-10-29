@@ -65,9 +65,10 @@ describe('server basics', () => {
   });
 
   it('says whether the browser is signed in', async () => {
-    expect((await app.http().get('/api/me')).body).toEqual({ signedIn: false, signInAvailable: false });
+    const none = { name: null, picture: null, email: null };
+    expect((await app.http().get('/api/me')).body).toEqual({ signedIn: false, signInAvailable: false, ...none });
     const { cookie } = await app.signIn('sub-1');
-    expect((await app.http().get('/api/me').set('Cookie', cookie)).body).toEqual({ signedIn: true, signInAvailable: false });
+    expect((await app.http().get('/api/me').set('Cookie', cookie)).body).toEqual({ signedIn: true, signInAvailable: false, ...none });
   });
 
   it('sends sign-in back with login=unavailable when no client secret is set', async () => {
