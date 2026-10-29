@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { FAVICON_ICO, generateManifests, loadBrandConfig, RASTER_ICONS, webIconFiles } from '@achoo254/brand/build';
 import { primaryOrigin } from '@achoo254/brand/hosts';
 import type { Plugin } from 'vite';
-import { MANIFEST_OPTIONS } from '../../scripts/brand-options.ts';
+import { MANIFEST_OPTIONS, OG_IMAGE } from '../../scripts/brand-options.ts';
 
 const require = createRequire(import.meta.url);
 const REPO_ROOT = new URL('../../', import.meta.url);
@@ -88,6 +88,12 @@ export function clipBrand(): Plugin[] {
     `<meta property="og:title" content="${escapeHtml(brand.appName)}" />`,
     `<meta property="og:description" content="${escapeHtml(brand.description)}" />`,
     `<meta property="og:url" content="${origin}/" />`,
+    `<meta property="og:locale" content="vi_VN" />`,
+    `<meta property="og:image" content="${origin}/${OG_IMAGE.path}" />`,
+    `<meta property="og:image:width" content="${OG_IMAGE.width}" />`,
+    `<meta property="og:image:height" content="${OG_IMAGE.height}" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:image" content="${origin}/${OG_IMAGE.path}" />`,
     `<link rel="manifest" href="/manifest.webmanifest" />`,
     `<link rel="icon" href="/${FAVICON_ICO}" sizes="16x16 32x32 48x48" />`,
     ...(favicon ? [`<link rel="icon" type="image/svg+xml" href="/${favicon.path}" />`] : []),

@@ -25,3 +25,6 @@ export const MANIFEST_OPTIONS: GenerateManifestsOptions = {
     icons: svgManifestIcons(),
   },
 };
+
+/** The link preview (1200 × 630), drawn by `pnpm brand:gen` into apps/web/public/ and named in the head tags. */
+export const OG_IMAGE = { path: 'og-image.png', width: 1200, height: 630 } as const;

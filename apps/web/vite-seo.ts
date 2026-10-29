@@ -72,7 +72,14 @@ export function pageHtml(indexHtml: string, origin: string, head: PageHead, body
   html = replaceOnce(html, /<meta property="og:title" content="[^"]*" \/>/, `<meta property="og:title" content="${esc(head.title)}" />`, 'og:title');
   html = replaceOnce(html, /<meta property="og:description" content="[^"]*" \/>/, `<meta property="og:description" content="${esc(head.description)}" />`, 'og:description');
   html = replaceOnce(html, /<meta property="og:url" content="[^"]*" \/>/, `<meta property="og:url" content="${url}" />`, 'og:url');
-  const extra = [`<link rel="canonical" href="${url}" />`, ...(head.image ? [`<meta property="og:image" content="${origin}${head.image}" />`] : [])];
+  const extra = [`<link rel="canonical" href="${url}" />`];
+  if (head.image) {
+    // The page's own picture replaces the app's link preview, whose size no longer applies.
+    const image = `${origin}${head.image}`;
+    html = html.replace(/\s*<meta property="og:image:(width|height)" content="[^"]*" \/>/g, '');
+    html = html.replace(/<meta (property="og:image"|name="twitter:image") content="[^"]*" \/>/g, (_match, attr: string) => `<meta ${attr} content="${image}" />`);
+    if (!html.includes('<meta property="og:image" ')) extra.push(`<meta property="og:image" content="${image}" />`);
+  }
   html = replaceOnce(html, /<\/head>/, `    ${extra.join('\n    ')}\n  </head>`, '</head>');
   return replaceOnce(html, /<div id="root"><\/div>/, `<div id="root">${body}</div>`, '#root');
 }

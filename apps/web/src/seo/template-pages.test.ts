@@ -45,6 +45,29 @@ describe('template pages', () => {
     expect(html.match(/<title>/g)).toHaveLength(1);
   });
 
+  it("puts the template's poster in place of the app's link preview, once", () => {
+    const withPreview = INDEX.replace(
+      '</head>',
+      [
+        `<meta property="og:image" content="${ORIGIN}/og-image.png" />`,
+        '<meta property="og:image:width" content="1200" />',
+        '<meta property="og:image:height" content="630" />',
+        `<meta name="twitter:image" content="${ORIGIN}/og-image.png" />`,
+        '</head>',
+      ].join('\n'),
+    );
+    const page = seoPages().find((p) => p.file === 'mau/tet/index.html');
+    if (!page) throw new Error('no page');
+    const html = pageHtml(withPreview, ORIGIN, page.head, page.body);
+    expect(html.match(/property="og:image"/g)).toHaveLength(1);
+    expect(html).toContain(`<meta property="og:image" content="${ORIGIN}/tpl/themes/tet/thumb.webp" />`);
+    expect(html).toContain(`<meta name="twitter:image" content="${ORIGIN}/tpl/themes/tet/thumb.webp" />`);
+    expect(html).not.toContain('og:image:width');
+    const index = seoPages().find((p) => p.file === 'mau/index.html');
+    if (!index) throw new Error('no index');
+    expect(pageHtml(withPreview, ORIGIN, index.head, index.body)).toContain(`<meta property="og:image" content="${ORIGIN}/og-image.png" />`);
+  });
+
   it('escapes the text it puts into HTML', () => {
     const html = pageHtml(INDEX, ORIGIN, { title: 'a "b" <c>', description: 'x & y', path: '/mau' }, '');
     expect(html).toContain('<title>a &quot;b&quot; &lt;c&gt; · Clip</title>');
