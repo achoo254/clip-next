@@ -25,8 +25,9 @@ qua, rồi query và fragment được xoá khỏi thanh địa chỉ). Mỗi ch
 nhỏ; thêm 5 nền thay thế `bg-2..6.webp` cùng dịp, cùng bảng màu để người dùng chọn bằng nút "Đổi nền"; tuỳ chọn
 `bg.mp4`, bản chuyển động của `bg.webp`, phát dưới nền đầu tiên, `bg.webp` làm poster và dự phòng; bật bằng
 `videoBackground` trong catalog) và bảng màu chữ (`theme.css`); danh sách mẫu ở `packages/templates/src/catalog.ts`.
-Mỗi mẫu thuộc một nhóm nhạc theo dịp (`musicGroup`); mỗi video lấy một bản trong nhóm, chọn theo id của job nên render
-lại vẫn ra đúng bản đó; nhóm chưa có nhạc riêng (`GROUP_TRACKS` rỗng) dùng bốn bản nhạc chung. Thêm nhạc là thêm
+Mỗi mẫu thuộc một nhóm nhạc theo dịp (`musicGroup`). Nhóm chưa có nhạc riêng (`GROUP_TRACKS` rỗng): mẫu giữ bản nhạc
+cố định của nó (`music`, một trong bốn bản nhạc chung), ở cả xem trước lẫn video. Nhóm đã có nhạc riêng: mỗi video lấy
+một bản trong nhóm, chọn theo id của job nên render lại vẫn ra đúng bản đó; xem trước phát bản đầu của nhóm. Thêm nhạc là thêm
 `<bản>.m4a` vào `project/assets/music/` và id của nó vào nhóm. Thêm mẫu là thêm
 một chủ đề, không thêm bố cục. Không có hình trang trí vẽ bằng CSS; gradient và lớp nền mờ chỉ để chữ dễ đọc.
 Video ra ba khổ: dọc 9:16 (1080×1920, khổ bố cục được vẽ), 4:5 (1080×1350) và vuông (1080×1080); hai khổ sau thu

@@ -8,9 +8,9 @@ import {
   FORMAT_SIZES,
   compositionVariables,
   GROUP_TRACKS,
-  groupTracks,
   MUSIC_GROUPS,
   pickTrack,
+  previewTrack,
   SHARED_TRACKS,
   usesVideoBackground,
   VIDEO_BACKGROUND_FILE,
@@ -278,32 +278,78 @@ describe('music', () => {
     expect(new Set([...SHARED_TRACKS, ...own]).size).toBe(SHARED_TRACKS.length + own.length);
   });
 
-  it('a group without tracks of its own plays the shared tracks', () => {
-    for (const group of MUSIC_GROUPS) {
-      const own: readonly string[] = GROUP_TRACKS[group];
-      expect(groupTracks(group)).toEqual(own.length > 0 ? own : SHARED_TRACKS);
-    }
-  });
+  /** The fixed track of every template before music groups: what each keeps until its group has tracks. */
+  const FIXED_TRACKS: Readonly<Record<string, string>> = {
+    'chuc-mung': 'fetch-dance',
+    'thay-co': 'good-fellow',
+    'tet': 'fetch-dance',
+    'giang-sinh': 'bicycle',
+    'tinh-yeu': 'chillin-poupi',
+    'dam-cuoi': 'good-fellow',
+    'tot-nghiep': 'fetch-dance',
+    'khai-truong': 'bicycle',
+    'ke-nhanh': 'bicycle',
+    'chuyen-di': 'good-fellow',
+    'trich-dan': 'chillin-poupi',
+    'cam-on': 'chillin-poupi',
+    'phu-nu-8-3': 'chillin-poupi',
+    'phu-nu-20-10': 'good-fellow',
+    'thieu-nhi': 'fetch-dance',
+    'trung-thu': 'bicycle',
+    'valentine': 'chillin-poupi',
+    'vu-lan': 'good-fellow',
+    'ngay-cua-me': 'good-fellow',
+    'halloween': 'fetch-dance',
+    'quoc-khanh': 'bicycle',
+    'tan-gia': 'bicycle',
+    'day-thang': 'chillin-poupi',
+    'mung-tho': 'good-fellow',
+    'thang-chuc': 'fetch-dance',
+    'ky-niem-cuoi': 'chillin-poupi',
+    'thu-cung': 'fetch-dance',
+    'khuyen-mai': 'fetch-dance',
+    'mon-an': 'bicycle',
+    'ban-hang': 'bicycle',
+    'tuyen-dung': 'good-fellow',
+    'su-kien': 'fetch-dance',
+    'cam-trai': 'good-fellow',
+    'chao-buoi-sang': 'bicycle',
+    'chuc-ngu-ngon': 'chillin-poupi',
+    'dong-vien': 'fetch-dance',
+    'xin-loi': 'chillin-poupi',
+    'la-so': 'chillin-poupi',
+  };
 
-  it('picks the same track for the same seed, always one of the group’s, and spreads videos over them', () => {
+  it('a template whose group has no tracks of its own keeps its fixed track, in the preview and in every video', () => {
+    expect(Object.keys(FIXED_TRACKS)).toEqual([...TEMPLATE_IDS]);
     for (const spec of TEMPLATES) {
-      const tracks = groupTracks(spec.musicGroup);
-      const picks = Array.from({ length: 200 }, (_, i) => pickTrack(spec, `job-${i}`));
-      for (const [i, track] of picks.entries()) {
-        expect(tracks).toContain(track);
-        expect(pickTrack(spec, `job-${i}`)).toBe(track);
-      }
-      expect(new Set(picks).size, spec.id).toBe(tracks.length);
+      const own: readonly string[] = GROUP_TRACKS[spec.musicGroup];
+      if (own.length > 0) continue;
+      expect(spec.music, spec.id).toBe(FIXED_TRACKS[spec.id]);
+      expect(previewTrack(spec), spec.id).toBe(spec.music);
+      for (let i = 0; i < 20; i += 1) expect(pickTrack(spec, `job-${i}`), spec.id).toBe(spec.music);
     }
-    const spec = templateById('chuc-mung');
-    expect(pickTrack(spec, '6f1c2a4e-1b7d-4c1e-9a55-0d3a8e2b7c10')).toBe(pickTrack(spec, '6f1c2a4e-1b7d-4c1e-9a55-0d3a8e2b7c10'));
   });
 
-  it('puts the chosen track in the composition, and a default one without a choice', () => {
+  it('within a group’s own tracks, picks the same track for the same seed and spreads videos over all of them', () => {
+    const spec = templateById('chuc-mung');
+    const own = ['bicycle', 'good-fellow', 'chillin-poupi'] as const;
+    const picks = Array.from({ length: 200 }, (_, i) => pickTrack(spec, `job-${i}`, own));
+    for (const [i, track] of picks.entries()) {
+      expect(own).toContain(track);
+      expect(pickTrack(spec, `job-${i}`, own)).toBe(track);
+    }
+    expect(new Set(picks).size).toBe(own.length);
+    const id = '6f1c2a4e-1b7d-4c1e-9a55-0d3a8e2b7c10';
+    expect(pickTrack(spec, id, own)).toBe(pickTrack(spec, id, [...own]));
+    expect(pickTrack(spec, id, [])).toBe(spec.music);
+  });
+
+  it('puts the chosen track in the composition, and the preview track without a choice', () => {
     const spec = templateById('trich-dan');
     const html = readFileSync(path.join(PROJECT_DIR, 'layouts', `${spec.layout}.html`), 'utf8');
     for (const music of SHARED_TRACKS) expect(composeTemplateHtml(html, spec, '9:16', { music })).toContain(`src="assets/music/${music}.m4a"`);
-    expect(composeTemplateHtml(html, spec)).toContain(`src="assets/music/${pickTrack(spec, spec.id)}.m4a"`);
+    expect(composeTemplateHtml(html, spec)).toContain(`src="assets/music/${previewTrack(spec)}.m4a"`);
   });
 
   // Turned on once the occasion tracks are generated and listed in GROUP_TRACKS: each group should then have at

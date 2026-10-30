@@ -9,7 +9,7 @@
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { composeTemplateHtml, pickTrack, templateById, usesVideoBackground, VIDEO_BACKGROUND_FILE, type CompositionChoice, type TemplateId, type VideoFormat } from './catalog';
+import { composeTemplateHtml, previewTrack, templateById, usesVideoBackground, VIDEO_BACKGROUND_FILE, type CompositionChoice, type TemplateId, type VideoFormat } from './catalog';
 
 /**
  * packages/templates/project: layouts, scripts, themes and shared assets. Found through the package's own name, so
@@ -23,7 +23,7 @@ export const PROJECT_DIR = path.join(path.dirname(createRequire(import.meta.url)
  */
 export async function prepareProject(templateId: TemplateId, dir: string, format: VideoFormat = '9:16', choice: CompositionChoice = {}): Promise<void> {
   const spec = templateById(templateId);
-  const music = choice.music ?? pickTrack(spec, spec.id);
+  const music = choice.music ?? previewTrack(spec);
   const layoutHtml = await readFile(path.join(PROJECT_DIR, 'layouts', `${spec.layout}.html`), 'utf8');
   await mkdir(path.join(dir, 'scripts'), { recursive: true });
   await writeFile(path.join(dir, 'index.html'), composeTemplateHtml(layoutHtml, spec, format, { ...choice, music }));

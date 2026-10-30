@@ -159,19 +159,22 @@ export const OCCASION_NAMES: Readonly<Record<Occasion, Localized>> = {
 };
 
 /**
- * Music: every template belongs to one occasion group, and a video gets one track of its group, picked by pickTrack.
- * Tracks are AAC files `project/assets/music/<track>.m4a` (assets/CREDITS.md). A track id goes into the composition
- * as part of a path, so it is lowercase letters, digits and single hyphens only (the catalog test checks it).
+ * Music: every template belongs to one occasion group. While its group has no tracks of its own, a template plays its
+ * own fixed track from SHARED_TRACKS (`music`), in the preview and in every video; once the group has tracks, each
+ * video gets one of them, picked by pickTrack. Tracks are AAC files `project/assets/music/<track>.m4a`
+ * (assets/CREDITS.md). A track id goes into the composition as part of a path, so it is lowercase letters, digits and
+ * single hyphens only (the catalog test checks it).
  */
 export const MUSIC_GROUPS = ['festival', 'celebration', 'romance', 'gratitude', 'women', 'western-holiday', 'business', 'everyday', 'story'] as const;
 export type MusicGroup = (typeof MUSIC_GROUPS)[number];
 
-/** The four CC0 tracks shipped since launch: what a group plays until it has tracks of its own. */
+/** The four CC0 tracks shipped since launch; each template names one of them as its fixed track (`music`). */
 export const SHARED_TRACKS = ['fetch-dance', 'bicycle', 'chillin-poupi', 'good-fellow'] as const;
+export type SharedTrack = (typeof SHARED_TRACKS)[number];
 
 /**
  * Tracks made for each group. Adding music is adding `<track>.m4a` under project/assets/music and its id here; a
- * group with no tracks of its own plays SHARED_TRACKS.
+ * group with no tracks of its own leaves every template on its fixed track.
  */
 export const GROUP_TRACKS = {
   festival: [],
@@ -185,13 +188,7 @@ export const GROUP_TRACKS = {
   story: [],
 } as const satisfies Readonly<Record<MusicGroup, readonly string[]>>;
 
-export type MusicTrack = (typeof SHARED_TRACKS)[number] | (typeof GROUP_TRACKS)[MusicGroup][number];
-
-/** The tracks a group's videos are picked from: its own, or SHARED_TRACKS while it has none. */
-export function groupTracks(group: MusicGroup): readonly MusicTrack[] {
-  const own: readonly MusicTrack[] = GROUP_TRACKS[group];
-  return own.length > 0 ? own : SHARED_TRACKS;
-}
+export type MusicTrack = SharedTrack | (typeof GROUP_TRACKS)[MusicGroup][number];
 
 /** FNV-1a, 32 bits: a small, stable hash of a text (the same in Node and every browser). */
 function hash32(text: string): number {
@@ -204,14 +201,24 @@ function hash32(text: string): number {
 }
 
 /**
- * The track of one video: one of its template group's tracks, chosen by `seed` (the job id), so the same video always
- * gets the same track — a job rendered again after a worker restart sounds the same — while videos differ.
+ * The track of one video. With no tracks of its own in the group (`groupTracks`, the template's group in GROUP_TRACKS
+ * by default), the template's fixed track. Otherwise one of the group's, chosen by `seed` (the job id), so the same
+ * video always gets the same track — a job rendered again after a worker restart sounds the same — while videos
+ * differ.
  */
-export function pickTrack(spec: TemplateSpec, seed: string): MusicTrack {
-  const tracks = groupTracks(spec.musicGroup);
-  const track = tracks[hash32(seed) % tracks.length];
-  if (track === undefined) throw new Error(`music group ${spec.musicGroup} has no track`);
-  return track;
+export function pickTrack(spec: TemplateSpec, seed: string, groupTracks: readonly MusicTrack[] = GROUP_TRACKS[spec.musicGroup]): MusicTrack {
+  if (groupTracks.length === 0) return spec.music;
+  return groupTracks[hash32(seed) % groupTracks.length] ?? spec.music;
+}
+
+/**
+ * The track the preview (and `check:templates`) plays: the template's fixed track while its group has none of its
+ * own, so the preview sounds like the video; otherwise the group's first, which a video may differ from (its track
+ * depends on the job, which does not exist yet while previewing).
+ */
+export function previewTrack(spec: TemplateSpec): MusicTrack {
+  const own: readonly MusicTrack[] = GROUP_TRACKS[spec.musicGroup];
+  return own[0] ?? spec.music;
 }
 
 /**
@@ -265,7 +272,9 @@ export interface TemplateSpec {
   readonly layout: LayoutId;
   /** Art pack under project/themes/<theme>/ (AI-drawn background, stickers, frame) and its colours (theme.css). */
   readonly theme: string;
-  /** Occasion group whose tracks the template's videos play (see pickTrack). */
+  /** The template's fixed track, played while its music group has no tracks of its own (see pickTrack). */
+  readonly music: SharedTrack;
+  /** Occasion group whose tracks the template's videos play once it has some (see pickTrack). */
   readonly musicGroup: MusicGroup;
   readonly occasions: readonly Occasion[];
   readonly name: Localized;
@@ -286,6 +295,7 @@ interface ThemeEntry {
   readonly id: TemplateId;
   readonly layout: LayoutId;
   readonly theme: string;
+  readonly music: SharedTrack;
   readonly musicGroup: MusicGroup;
   readonly occasions: readonly Occasion[];
   readonly name: Localized;
@@ -310,6 +320,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'chuc-mung',
     layout: 'greeting',
     theme: 'sinh-nhat',
+    music: 'fetch-dance',
     musicGroup: 'celebration',
     occasions: ['celebrate'],
     name: { vi: 'Sinh nhật', en: 'Birthday' },
@@ -324,6 +335,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'thay-co',
     layout: 'greeting',
     theme: 'thay-co',
+    music: 'good-fellow',
     musicGroup: 'gratitude',
     occasions: ['holiday'],
     name: { vi: 'Tri ân thầy cô 20/11', en: "Teachers' Day" },
@@ -338,6 +350,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'tet',
     layout: 'greeting',
     theme: 'tet',
+    music: 'fetch-dance',
     musicGroup: 'festival',
     occasions: ['holiday'],
     name: { vi: 'Năm mới, Tết', en: 'Lunar New Year' },
@@ -352,6 +365,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'giang-sinh',
     layout: 'greeting',
     theme: 'giang-sinh',
+    music: 'bicycle',
     musicGroup: 'western-holiday',
     occasions: ['holiday'],
     name: { vi: 'Giáng sinh', en: 'Christmas' },
@@ -366,6 +380,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'tinh-yeu',
     layout: 'greeting',
     theme: 'tinh-yeu',
+    music: 'chillin-poupi',
     musicGroup: 'romance',
     occasions: ['love'],
     name: { vi: 'Tình yêu, kỷ niệm', en: 'Love & anniversary' },
@@ -380,6 +395,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'dam-cuoi',
     layout: 'greeting',
     theme: 'dam-cuoi',
+    music: 'good-fellow',
     musicGroup: 'romance',
     occasions: ['love', 'celebrate'],
     name: { vi: 'Đám cưới', en: 'Wedding' },
@@ -394,6 +410,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'tot-nghiep',
     layout: 'greeting',
     theme: 'tot-nghiep',
+    music: 'fetch-dance',
     musicGroup: 'celebration',
     occasions: ['celebrate'],
     name: { vi: 'Tốt nghiệp', en: 'Graduation' },
@@ -408,6 +425,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'khai-truong',
     layout: 'greeting',
     theme: 'khai-truong',
+    music: 'bicycle',
     musicGroup: 'business',
     occasions: ['celebrate'],
     name: { vi: 'Khai trương, thành công', en: 'Grand opening' },
@@ -422,6 +440,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'ke-nhanh',
     layout: 'quick',
     theme: 'ke-nhanh',
+    music: 'bicycle',
     musicGroup: 'story',
     occasions: ['share'],
     name: { vi: 'Kể nhanh', en: 'Quick list' },
@@ -439,6 +458,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'chuyen-di',
     layout: 'quick',
     theme: 'chuyen-di',
+    music: 'good-fellow',
     musicGroup: 'story',
     occasions: ['share'],
     name: { vi: 'Chuyến đi', en: 'Trip postcard' },
@@ -456,6 +476,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'trich-dan',
     layout: 'quote',
     theme: 'trich-dan',
+    music: 'chillin-poupi',
     musicGroup: 'story',
     occasions: ['share'],
     name: { vi: 'Trích dẫn', en: 'Quote' },
@@ -469,6 +490,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'cam-on',
     layout: 'quote',
     theme: 'cam-on',
+    music: 'chillin-poupi',
     musicGroup: 'everyday',
     occasions: ['share', 'love'],
     name: { vi: 'Cảm ơn', en: 'Thank you' },
@@ -482,6 +504,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'phu-nu-8-3',
     layout: 'greeting',
     theme: 'phu-nu-8-3',
+    music: 'chillin-poupi',
     musicGroup: 'women',
     occasions: ['holiday', 'love'],
     name: { vi: 'Quốc tế Phụ nữ 8/3', en: "Women's Day" },
@@ -496,6 +519,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'phu-nu-20-10',
     layout: 'greeting',
     theme: 'phu-nu-20-10',
+    music: 'good-fellow',
     musicGroup: 'women',
     occasions: ['holiday', 'love'],
     name: { vi: 'Phụ nữ Việt Nam 20/10', en: "Vietnamese Women's Day" },
@@ -510,6 +534,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'thieu-nhi',
     layout: 'greeting',
     theme: 'thieu-nhi',
+    music: 'fetch-dance',
     musicGroup: 'festival',
     occasions: ['holiday', 'family'],
     name: { vi: 'Quốc tế Thiếu nhi 1/6', en: "Children's Day" },
@@ -524,6 +549,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'trung-thu',
     layout: 'greeting',
     theme: 'trung-thu',
+    music: 'bicycle',
     musicGroup: 'festival',
     occasions: ['holiday', 'family'],
     name: { vi: 'Trung thu', en: 'Mid-Autumn Festival' },
@@ -538,6 +564,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'valentine',
     layout: 'greeting',
     theme: 'valentine',
+    music: 'chillin-poupi',
     musicGroup: 'romance',
     occasions: ['holiday', 'love'],
     name: { vi: 'Valentine 14/2', en: "Valentine's Day" },
@@ -552,6 +579,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'vu-lan',
     layout: 'greeting',
     theme: 'vu-lan',
+    music: 'good-fellow',
     musicGroup: 'gratitude',
     occasions: ['holiday', 'family'],
     name: { vi: 'Vu Lan báo hiếu', en: 'Vu Lan, gratitude to parents' },
@@ -566,6 +594,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'ngay-cua-me',
     layout: 'greeting',
     theme: 'ngay-cua-me',
+    music: 'good-fellow',
     musicGroup: 'women',
     occasions: ['family', 'love'],
     name: { vi: 'Ngày của Mẹ', en: "Mother's Day" },
@@ -580,6 +609,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'halloween',
     layout: 'greeting',
     theme: 'halloween',
+    music: 'fetch-dance',
     musicGroup: 'western-holiday',
     occasions: ['holiday'],
     name: { vi: 'Halloween', en: 'Halloween' },
@@ -594,6 +624,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'quoc-khanh',
     layout: 'greeting',
     theme: 'quoc-khanh',
+    music: 'bicycle',
     musicGroup: 'festival',
     occasions: ['holiday'],
     name: { vi: 'Quốc khánh 2/9', en: 'National Day' },
@@ -608,6 +639,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'tan-gia',
     layout: 'greeting',
     theme: 'tan-gia',
+    music: 'bicycle',
     musicGroup: 'celebration',
     occasions: ['celebrate', 'family'],
     name: { vi: 'Tân gia', en: 'Housewarming' },
@@ -622,6 +654,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'day-thang',
     layout: 'greeting',
     theme: 'day-thang',
+    music: 'chillin-poupi',
     musicGroup: 'celebration',
     occasions: ['celebrate', 'family'],
     name: { vi: 'Đầy tháng, thôi nôi', en: 'Baby milestones' },
@@ -636,6 +669,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'mung-tho',
     layout: 'greeting',
     theme: 'mung-tho',
+    music: 'good-fellow',
     musicGroup: 'celebration',
     occasions: ['celebrate', 'family'],
     name: { vi: 'Mừng thọ ông bà', en: "Grandparents' longevity" },
@@ -650,6 +684,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'thang-chuc',
     layout: 'greeting',
     theme: 'thang-chuc',
+    music: 'fetch-dance',
     musicGroup: 'celebration',
     occasions: ['celebrate'],
     name: { vi: 'Thăng chức, thành công', en: 'Promotion & success' },
@@ -664,6 +699,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'ky-niem-cuoi',
     layout: 'greeting',
     theme: 'ky-niem-cuoi',
+    music: 'chillin-poupi',
     musicGroup: 'romance',
     occasions: ['love'],
     name: { vi: 'Kỷ niệm ngày cưới', en: 'Wedding anniversary' },
@@ -678,6 +714,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'thu-cung',
     layout: 'greeting',
     theme: 'thu-cung',
+    music: 'fetch-dance',
     musicGroup: 'everyday',
     occasions: ['share'],
     name: { vi: 'Thú cưng', en: 'Pets' },
@@ -692,6 +729,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'khuyen-mai',
     layout: 'quick',
     theme: 'khuyen-mai',
+    music: 'fetch-dance',
     musicGroup: 'business',
     occasions: ['business'],
     name: { vi: 'Khuyến mãi, Black Friday', en: 'Sale & Black Friday' },
@@ -709,6 +747,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'mon-an',
     layout: 'quick',
     theme: 'mon-an',
+    music: 'bicycle',
     musicGroup: 'business',
     occasions: ['business', 'share'],
     name: { vi: 'Món ngon, giới thiệu quán', en: 'Food & restaurant' },
@@ -726,6 +765,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'ban-hang',
     layout: 'quick',
     theme: 'ban-hang',
+    music: 'bicycle',
     musicGroup: 'business',
     occasions: ['business'],
     name: { vi: 'Giới thiệu sản phẩm', en: 'Product showcase' },
@@ -743,6 +783,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'tuyen-dung',
     layout: 'quick',
     theme: 'tuyen-dung',
+    music: 'good-fellow',
     musicGroup: 'business',
     occasions: ['business'],
     name: { vi: 'Tuyển dụng', en: 'Hiring' },
@@ -760,6 +801,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'su-kien',
     layout: 'quick',
     theme: 'su-kien',
+    music: 'fetch-dance',
     musicGroup: 'business',
     occasions: ['business', 'share'],
     name: { vi: 'Thông báo sự kiện', en: 'Event announcement' },
@@ -777,6 +819,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'cam-trai',
     layout: 'quick',
     theme: 'cam-trai',
+    music: 'good-fellow',
     musicGroup: 'story',
     occasions: ['share'],
     name: { vi: 'Leo núi, cắm trại', en: 'Mountains & camping' },
@@ -794,6 +837,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'chao-buoi-sang',
     layout: 'quote',
     theme: 'chao-buoi-sang',
+    music: 'bicycle',
     musicGroup: 'everyday',
     occasions: ['share'],
     name: { vi: 'Chào buổi sáng', en: 'Good morning' },
@@ -807,6 +851,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'chuc-ngu-ngon',
     layout: 'quote',
     theme: 'chuc-ngu-ngon',
+    music: 'chillin-poupi',
     musicGroup: 'everyday',
     occasions: ['share', 'love'],
     name: { vi: 'Chúc ngủ ngon', en: 'Good night' },
@@ -820,6 +865,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'dong-vien',
     layout: 'quote',
     theme: 'dong-vien',
+    music: 'fetch-dance',
     musicGroup: 'everyday',
     occasions: ['share'],
     name: { vi: 'Cố lên, thi tốt', en: 'Keep going, good luck' },
@@ -833,6 +879,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'xin-loi',
     layout: 'quote',
     theme: 'xin-loi',
+    music: 'chillin-poupi',
     musicGroup: 'everyday',
     occasions: ['love', 'share'],
     name: { vi: 'Xin lỗi, làm lành', en: "I'm sorry" },
@@ -846,6 +893,7 @@ const ENTRIES: readonly ThemeEntry[] = [
     id: 'la-so',
     layout: 'chart',
     theme: 'la-so',
+    music: 'chillin-poupi',
     musicGroup: 'story',
     occasions: ['share'],
     // The Tử Vi app's own background: the card is about the chart, not the scenery.
@@ -876,6 +924,7 @@ export const TEMPLATES: readonly TemplateSpec[] = ENTRIES.map((entry) => {
     id: entry.id,
     layout: entry.layout,
     theme: entry.theme,
+    music: entry.music,
     musicGroup: entry.musicGroup,
     occasions: entry.occasions,
     name: entry.name,
@@ -1008,7 +1057,7 @@ export function usesVideoBackground(spec: TemplateSpec, background = 1): boolean
 export interface CompositionChoice {
   /** The chosen background, 1-based (see parseBackground); the video background only plays under the first. */
   readonly background?: number;
-  /** The track; the preview and `check:templates` use the template's own default pick. */
+  /** The track; previewTrack when not given (the preview, `check:templates`). */
   readonly music?: MusicTrack;
 }
 
@@ -1017,7 +1066,7 @@ export interface CompositionChoice {
  * the theme's moving background in place of its first picture when it has one.
  */
 export function composeTemplateHtml(layoutHtml: string, spec: TemplateSpec, format: VideoFormat = '9:16', choice: CompositionChoice = {}): string {
-  const music = choice.music ?? pickTrack(spec, spec.id);
+  const music = choice.music ?? previewTrack(spec);
   const layout = usesVideoBackground(spec, choice.background) ? withVideoBackground(layoutHtml, spec.durationSeconds) : layoutHtml;
   return fitToFormat(layout, format).replaceAll('{{theme}}', spec.theme).replaceAll('{{music}}', music);
 }
