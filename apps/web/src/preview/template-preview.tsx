@@ -44,7 +44,7 @@ export function TemplatePreview({ templateId, format, fields, photoUrls, backgro
   const size = FORMAT_SIZES[format];
   const target = useMemo(
     () =>
-      previewDocument(composeTemplateHtml(LAYOUT_HTML[spec.layout], spec, format), compositionVariables(spec, fields, photoUrls, background), window.location.origin),
+      previewDocument(composeTemplateHtml(LAYOUT_HTML[spec.layout], spec, format, { background }), compositionVariables(spec, fields, photoUrls, background), window.location.origin),
     [spec, format, fields, photoUrls, background],
   );
   // Wraps around: after the last background comes the first.

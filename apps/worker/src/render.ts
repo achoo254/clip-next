@@ -14,13 +14,17 @@ import { spawn, spawnSync } from 'node:child_process';
 import { cp, mkdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { FORMAT_SIZES, MAX_DURATION_SECONDS, type TemplateId, type VideoFormat } from '@clip/templates';
+import { FORMAT_SIZES, MAX_DURATION_SECONDS, type MusicTrack, type TemplateId, type VideoFormat } from '@clip/templates';
 import { prepareProject } from '@clip/templates/project';
 
 export interface RenderInput {
   readonly templateId: TemplateId;
   /** Video shape; the layouts are drawn for 9:16 and fitted to the others. */
   readonly format: VideoFormat;
+  /** The chosen background, 1-based (also in `variables`): decides whether the theme's video background plays. */
+  readonly background: number;
+  /** The video's track (see pickTrack). */
+  readonly music: MusicTrack;
   /** Composition variables; photo variables hold paths relative to the project (`photos/photo-1.jpg`). */
   readonly variables: Readonly<Record<string, string>>;
   /** Absolute paths of the photos, copied into the project as `photos/<file name>`. */
@@ -245,7 +249,7 @@ export async function renderVideo(input: RenderInput, options: RenderOptions): P
   const { workDir } = input;
   await mkdir(workDir, { recursive: true });
   try {
-    await prepareProject(input.templateId, workDir, input.format);
+    await prepareProject(input.templateId, workDir, input.format, { background: input.background, music: input.music });
     await mkdir(path.join(workDir, 'photos'), { recursive: true });
     for (const photo of input.photos) await cp(photo, path.join(workDir, 'photos', path.basename(photo)));
     const variablesFile = path.join(workDir, 'variables.json');

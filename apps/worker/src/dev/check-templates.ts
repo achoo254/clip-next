@@ -33,7 +33,7 @@ const runs = chosen.flatMap((templateId) =>
 for (const { templateId, background } of runs) {
   const dir = await mkdtemp(path.join(os.tmpdir(), `clip-check-${templateId}-`));
   try {
-    await prepareProject(templateId, dir);
+    await prepareProject(templateId, dir, '9:16', { background });
     if (background > 1) await defaultBackground(dir, background);
     console.log(`== ${templateId}${background > 1 ? ` (background ${background})` : ''}`);
     const result = spawnSync(process.execPath, [hyperframesBin(), 'check', dir], { env: hyperframesEnv(process.env.CHROME_PATH), encoding: 'utf8' });

@@ -7,6 +7,13 @@ import {
   composeTemplateHtml,
   FORMAT_SIZES,
   compositionVariables,
+  GROUP_TRACKS,
+  groupTracks,
+  MUSIC_GROUPS,
+  pickTrack,
+  SHARED_TRACKS,
+  usesVideoBackground,
+  VIDEO_BACKGROUND_FILE,
   CUC_CHOICES,
   fieldsFromQuery,
   isTemplateId,
@@ -191,11 +198,10 @@ describe('templates', () => {
   }
 
   for (const spec of TEMPLATES) {
-    it(`${spec.id}: its theme pack and music are on disk, and every placeholder is filled`, () => {
+    it(`${spec.id}: its theme pack is on disk, and every placeholder is filled`, () => {
       const dir = path.join(PROJECT_DIR, 'themes', spec.theme);
       const files = ['bg.webp', 'thumb.webp', 'theme.css', 'sticker-1.webp', 'sticker-2.webp', 'sticker-3.webp', ...(spec.layout === 'greeting' ? ['frame.webp'] : [])];
       for (const file of files) expect(existsSync(path.join(dir, file)), `${spec.theme}/${file}`).toBe(true);
-      expect(existsSync(path.join(PROJECT_DIR, 'assets', 'music', `${spec.music}.m4a`))).toBe(true);
       const html = composeTemplateHtml(readFileSync(path.join(PROJECT_DIR, 'layouts', `${spec.layout}.html`), 'utf8'), spec);
       expect(html).not.toContain('{{');
       for (const field of spec.fields.filter((f) => f.required)) expect(field.placeholder.vi && field.placeholder.en, field.id).toBeTruthy();
@@ -225,6 +231,8 @@ function webpSize(file: string): { width: number; height: number } {
 
 /** Largest background file accepted: the existing ones are 70–550 KB at cwebp -q 88. */
 const MAX_BACKGROUND_BYTES = 600 * 1024;
+/** Largest video background accepted: a few seconds of slow motion, looped, need not weigh more. */
+const MAX_VIDEO_BACKGROUND_BYTES = 4 * 1024 * 1024;
 
 describe('background variants', () => {
   it('every theme but the birth chart offers the full set', () => {
@@ -251,6 +259,113 @@ describe('background variants', () => {
     });
   }
 
+});
+
+describe('music', () => {
+  const trackFile = (track: string): string => path.join(PROJECT_DIR, 'assets', 'music', `${track}.m4a`);
+
+  it('every template belongs to a music group, and every group has templates', () => {
+    for (const spec of TEMPLATES) expect(MUSIC_GROUPS, spec.id).toContain(spec.musicGroup);
+    for (const group of MUSIC_GROUPS) expect(TEMPLATES.some((t) => t.musicGroup === group), group).toBe(true);
+  });
+
+  it('lists only tracks that are on disk, with ids safe to put in a path, each in one group', () => {
+    const own = MUSIC_GROUPS.flatMap((group): readonly string[] => GROUP_TRACKS[group]);
+    for (const track of [...SHARED_TRACKS, ...own]) {
+      expect(track).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+      expect(existsSync(trackFile(track)), track).toBe(true);
+    }
+    expect(new Set([...SHARED_TRACKS, ...own]).size).toBe(SHARED_TRACKS.length + own.length);
+  });
+
+  it('a group without tracks of its own plays the shared tracks', () => {
+    for (const group of MUSIC_GROUPS) {
+      const own: readonly string[] = GROUP_TRACKS[group];
+      expect(groupTracks(group)).toEqual(own.length > 0 ? own : SHARED_TRACKS);
+    }
+  });
+
+  it('picks the same track for the same seed, always one of the group’s, and spreads videos over them', () => {
+    for (const spec of TEMPLATES) {
+      const tracks = groupTracks(spec.musicGroup);
+      const picks = Array.from({ length: 200 }, (_, i) => pickTrack(spec, `job-${i}`));
+      for (const [i, track] of picks.entries()) {
+        expect(tracks).toContain(track);
+        expect(pickTrack(spec, `job-${i}`)).toBe(track);
+      }
+      expect(new Set(picks).size, spec.id).toBe(tracks.length);
+    }
+    const spec = templateById('chuc-mung');
+    expect(pickTrack(spec, '6f1c2a4e-1b7d-4c1e-9a55-0d3a8e2b7c10')).toBe(pickTrack(spec, '6f1c2a4e-1b7d-4c1e-9a55-0d3a8e2b7c10'));
+  });
+
+  it('puts the chosen track in the composition, and a default one without a choice', () => {
+    const spec = templateById('trich-dan');
+    const html = readFileSync(path.join(PROJECT_DIR, 'layouts', `${spec.layout}.html`), 'utf8');
+    for (const music of SHARED_TRACKS) expect(composeTemplateHtml(html, spec, '9:16', { music })).toContain(`src="assets/music/${music}.m4a"`);
+    expect(composeTemplateHtml(html, spec)).toContain(`src="assets/music/${pickTrack(spec, spec.id)}.m4a"`);
+  });
+
+  // Turned on once the occasion tracks are generated and listed in GROUP_TRACKS: each group should then have at
+  // least two of its own. Skipped until then rather than met with placeholder files.
+  it.skip('every group has at least two tracks of its own', () => {
+    for (const group of MUSIC_GROUPS) expect(GROUP_TRACKS[group].length, group).toBeGreaterThanOrEqual(2);
+  });
+});
+
+/** The four-character type of an ISO base media file (MP4): `ftyp` right after the first box size. */
+function isMp4(file: string): boolean {
+  return readFileSync(file).toString('ascii', 4, 8) === 'ftyp';
+}
+
+describe('video backgrounds', () => {
+  for (const spec of TEMPLATES) {
+    it(`${spec.id}: ships ${VIDEO_BACKGROUND_FILE} exactly when the catalog says so`, () => {
+      const file = path.join(PROJECT_DIR, 'themes', spec.theme, VIDEO_BACKGROUND_FILE);
+      expect(existsSync(file), `${spec.theme}/${VIDEO_BACKGROUND_FILE}`).toBe(spec.videoBackground);
+      if (spec.videoBackground) {
+        expect(isMp4(file)).toBe(true);
+        expect(statSync(file).size).toBeLessThanOrEqual(MAX_VIDEO_BACKGROUND_BYTES);
+      }
+    });
+  }
+
+  for (const layout of LAYOUT_IDS) {
+    const html = readFileSync(path.join(PROJECT_DIR, 'layouts', `${layout}.html`), 'utf8');
+    const base = TEMPLATES.find((t) => t.layout === layout);
+    if (!base) throw new Error(`no template on ${layout}`);
+    const still = { ...base, videoBackground: false };
+    const moving = { ...base, videoBackground: true };
+
+    it(`${layout}: without a video background the composition is the picture, as before`, () => {
+      const out = composeTemplateHtml(html, still);
+      expect(out).toContain(`<img id="bg" src="themes/${base.theme}/bg.webp"`);
+      expect(out).not.toContain('<video');
+    });
+
+    for (const format of VIDEO_FORMATS) {
+      it(`${layout} ${format}: the first background plays the video, with the picture as poster`, () => {
+        const out = composeTemplateHtml(html, moving, format);
+        expect(out).not.toContain('<img id="bg"');
+        expect(out).toContain(
+          `<div id="motion"><video id="bg" src="themes/${base.theme}/${VIDEO_BACKGROUND_FILE}" poster="themes/${base.theme}/bg.webp" muted playsinline loop data-start="0" data-duration="${base.durationSeconds}"`,
+        );
+        expect(out.match(/<video /g)).toHaveLength(1);
+        // hyperframes refuses timed media inside a timed element: the video's layer sits right before the stage.
+        expect(out).toMatch(/<\/video><\/div>\s*<div id="stage"/);
+        if (format !== '9:16') expect(out).toContain('#stage, #motion { inset: auto;');
+      });
+    }
+
+    it(`${layout}: another chosen background is the picture, without the video`, () => {
+      for (let n = 2; n <= BACKGROUND_VARIANTS; n += 1) {
+        expect(usesVideoBackground(moving, n)).toBe(false);
+        expect(composeTemplateHtml(html, moving, '9:16', { background: n })).toBe(composeTemplateHtml(html, still, '9:16', { background: n }));
+      }
+      expect(usesVideoBackground(moving)).toBe(true);
+      expect(usesVideoBackground(still)).toBe(false);
+    });
+  }
 });
 
 describe('video formats', () => {

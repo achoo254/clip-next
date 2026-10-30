@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { RenderError, type RenderInput } from './render';
 import { processNextJob, type Renderer } from './worker-loop';
-import { templateById } from '@clip/templates';
+import { pickTrack, templateById } from '@clip/templates';
 
 let handle: DbHandle;
 let media: MediaLayout;
@@ -79,6 +79,7 @@ describe('worker', () => {
     const seen: RenderInput[] = [];
     expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('done');
     expect(seen[0]?.variables).toMatchObject({ background: String(last), quote: 'q' });
+    expect(seen[0]?.background).toBe(last);
     expect(await job(chosen)).toMatchObject({ background: last });
 
     const missing = await queue('la-so', { name: '', line1: 'a', line2: 'b', reading: 'r', animal: 'mui', star: '', cuc: 'moc-tam' }, 0, new Date(), 2);
@@ -97,6 +98,14 @@ describe('worker', () => {
     await queue('trich-dan', { quote: 'q', author: '' }, 0);
     expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('done');
     expect(seen[1]?.format).toBe('9:16');
+  });
+
+  it('plays the track picked from the job id, the same one each time the job is rendered', async () => {
+    const id = await queue('trich-dan', { quote: 'q', author: '' }, 0);
+    const seen: RenderInput[] = [];
+    expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('done');
+    expect(seen[0]?.music).toBe(pickTrack(templateById('trich-dan'), id));
+    expect(seen[0]?.background).toBe(1);
   });
 
   it('marks a job failed with the render error code', async () => {

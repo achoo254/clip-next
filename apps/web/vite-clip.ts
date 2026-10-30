@@ -33,6 +33,7 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
   '.js': 'text/javascript',
   '.ttf': 'font/ttf',
   '.m4a': 'audio/mp4',
+  '.mp4': 'video/mp4',
   '.webp': 'image/webp',
   '.css': 'text/css',
   '.txt': 'text/plain; charset=utf-8',

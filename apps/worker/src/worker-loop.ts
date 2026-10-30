@@ -1,7 +1,7 @@
 import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { claimNextJob, failStuckJobs, markJobDone, markJobFailed, requeueJob, type Db, type MediaLayout, type RenderJob } from '@clip/db';
-import { compositionVariables, isTemplateId, parseBackground, parseFormat, templateById } from '@clip/templates';
+import { compositionVariables, isTemplateId, parseBackground, parseFormat, pickTrack, templateById } from '@clip/templates';
 import { RenderError, type RenderInput, type RenderResult } from './render';
 
 /** Renders one job's video; `renderVideo` in production, injectable for tests of the queue. */
@@ -31,7 +31,7 @@ export type JobOutcome = 'idle' | 'done' | 'failed' | 'requeued';
 
 /**
  * The render input of a job: its fields, background and photos as composition variables, photos copied as `photos/…`,
- * and its format.
+ * its format, and its track, picked from the job id so a job rendered again gets the same one.
  */
 export function renderInputFor(job: RenderJob, media: MediaLayout): RenderInput {
   if (!isTemplateId(job.templateId)) throw new RenderError('render-failed', `unknown template ${job.templateId}`);
@@ -47,7 +47,7 @@ export function renderInputFor(job: RenderJob, media: MediaLayout): RenderInput 
     photos.map((file) => `photos/${path.basename(file)}`),
     background,
   );
-  return { templateId: job.templateId, format, variables, photos, workDir: path.join(media.tmp, `render-${job.id}`), output: media.video(job.id) };
+  return { templateId: job.templateId, format, background, music: pickTrack(spec, job.id), variables, photos, workDir: path.join(media.tmp, `render-${job.id}`), output: media.video(job.id) };
 }
 
 /**
