@@ -49,6 +49,8 @@ export const renderJobs = pgTable(
     background: integer('background').notNull().default(1),
     /** Video shape ('9:16', '4:5' or '1:1', validated against the catalog); jobs from before the choice: '9:16'. */
     format: text('format').notNull().default('9:16'),
+    /** Id of the voice reading the text (validated against the catalog); null: no voice (and jobs from before it). */
+    voice: text('voice'),
     /** Photos stored for the job under MEDIA_DIR/inputs/<id>/ (deleted once rendered). */
     photoCount: integer('photo_count').notNull(),
     status: text('status').$type<JobStatus>().notNull(),

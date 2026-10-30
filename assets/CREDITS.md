@@ -15,6 +15,18 @@ thuộc giấy phép MIT của mã nguồn.
 | Font giao diện web Oswald (tiêu đề) và Be Vietnam Pro (chữ thường), gói `@fontsource/*` có subset tiếng Việt | The Oswald Project Authors; The Be Vietnam Pro Project Authors | SIL Open Font License 1.1 | https://fontsource.org |
 | `brand/app-icon-master-1024.png` và mọi biểu tượng sinh ra từ nó (`brand/icon*.svg`, `brand/generated/`, `apps/web/public/clip-mark-128.webp`, `apps/web/public/clip-mascot-384.webp`) | AI-generated with open models (FLUX.2 klein 4B; Apache-2.0) for the hoandat ecosystem | Owned by hoandat, all rights reserved (not CC0) | `hoandat-app/docs/brand/apps/clip-icon-master-1024.png` |
 
+## Giọng đọc
+
+- **VieNeu-TTS v3 Nano** (pnnbao97 / `pnnbao-ump`), model ONNX chạy bằng CPU trên máy chủ của Clip, ghim revision
+  `aba295eb96a6fa6003ebe417cc1f2802a7adc1dc` (https://huggingface.co/pnnbao-ump/VieNeu-TTS-v3-Nano) và gói Python
+  `vieneu` 3.8.3 (https://github.com/pnnbao97/VieNeu-TTS) — Apache License 2.0. Model card ghi: "This model package is
+  distributed under Apache License 2.0", người lồng 11 giọng mẫu (preset) đã cấp quyền và đồng ý cho dùng giọng để huấn
+  luyện AI và tổng hợp giọng nói, audio sinh ra được dùng cả trong nội dung thương mại. Bản `README.md` của model (model
+  card) tải cùng model, kiểm bằng `apps/worker/tts/vieneu-v3-nano.sha256`. Clip chỉ dùng 11 giọng mẫu, không nhân bản
+  giọng của ai. Trang `/credits` ghi: "VieNeu-TTS v3 Nano (AI voice) — Apache License 2.0".
+- Chuẩn hoá chữ tiếng Việt: `sea-g2p` 0.10.0 (Apache License 2.0, phụ thuộc của `vieneu`); chạy model bằng ONNX
+  Runtime 1.31.1 (MIT).
+
 ## Thư viện render
 
 - `hyperframes`, `@hyperframes/player`, `@hyperframes/core` 0.8.201 (HeyGen) — Apache License 2.0

@@ -24,6 +24,8 @@ const Env = z.object({
   MEDIA_DIR: z.preprocess(emptyIsUnset, z.string().min(1).optional()),
   /** Chrome for the in-process dev worker (production renders in clip-worker, which has its own CHROME_PATH). */
   CHROME_PATH: z.preprocess(emptyIsUnset, z.string().min(1).optional()),
+  /** The voice's install (the worker reads with it); set: people may ask for a voiced video. Unset: voice is off. */
+  VOICE_DIR: z.preprocess(emptyIsUnset, z.string().min(1).optional()),
 });
 
 export interface AuthConfig {
@@ -44,6 +46,8 @@ export interface ServerConfig {
   readonly databaseUrl: string | undefined;
   readonly mediaDir: string;
   readonly chromePath: string | undefined;
+  /** VOICE_DIR: where the voice is installed; undefined when voice is off (voiced jobs are refused). */
+  readonly voiceDir: string | undefined;
   /**
    * How finished videos leave: `accel` hands the file to nginx (X-Accel-Redirect to an internal location) after the
    * ownership check, so Node never streams video; `node` sends it from Node (dev and tests, where there is no nginx).
@@ -80,6 +84,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     databaseUrl: e.DATABASE_URL,
     mediaDir: e.MEDIA_DIR ?? DEV_MEDIA_DIR,
     chromePath: e.CHROME_PATH,
+    voiceDir: e.VOICE_DIR,
     videoDelivery: production ? 'accel' : 'node',
   };
 }

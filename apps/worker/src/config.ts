@@ -14,6 +14,11 @@ const Env = z.object({
    */
   FFMPEG_PATH: z.preprocess(emptyIsUnset, z.string().min(1).optional()),
   FFPROBE_PATH: z.preprocess(emptyIsUnset, z.string().min(1).optional()),
+  /**
+   * The voice: VieNeu-TTS's own Python environment and model (`pyenv/`, `models/`; infra/deploy.sh voice installs
+   * them). Unset: no voice, and voiced jobs fail (the server only accepts them when it is set too).
+   */
+  VOICE_DIR: z.preprocess(emptyIsUnset, z.string().min(1).optional()),
 });
 
 export interface WorkerConfig {
@@ -23,6 +28,7 @@ export interface WorkerConfig {
   readonly pollMs: number;
   readonly ffmpegPath: string | undefined;
   readonly ffprobePath: string | undefined;
+  readonly voiceDir: string | undefined;
 }
 
 /** Validates the worker's env once at start; throws naming the offending keys. */
@@ -37,6 +43,7 @@ export function loadWorkerConfig(env: Record<string, string | undefined> = proce
     pollMs: e.POLL_MS,
     ffmpegPath: e.FFMPEG_PATH,
     ffprobePath: e.FFPROBE_PATH,
+    voiceDir: e.VOICE_DIR,
   };
 }
 

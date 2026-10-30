@@ -16,6 +16,7 @@ import {
   type RenderJob,
 } from '@clip/db';
 import { MAX_PHOTOS, parseBackground, parseFormat, templateById, validateInput } from '@clip/templates';
+import { estimateVoiceTimeline, parseVoice } from '@clip/templates/voice';
 import express, { type RequestHandler, type Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import multer from 'multer';
@@ -82,7 +83,7 @@ function refusal(result: Exclude<CreateJobResult, { ok: true }>): HttpError {
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_PHOTO_BYTES, files: MAX_PHOTOS, fields: 4, fieldSize: 8 * 1024, parts: MAX_PHOTOS + 4 },
+  limits: { fileSize: MAX_PHOTO_BYTES, files: MAX_PHOTOS, fields: 5, fieldSize: 8 * 1024, parts: MAX_PHOTOS + 5 },
 });
 
 /** Multer's limit errors as the API's codes. */
@@ -93,7 +94,7 @@ function uploadError(error: unknown): unknown {
   return new HttpError(400, 'invalid-input');
 }
 
-/** The multipart body: up to three photos (in memory, 5 MB each) and the text fields (template, fields, background, format). */
+/** The multipart body: up to three photos (in memory, 5 MB each) and the text fields (template, fields, background, format, voice). */
 const readUpload: RequestHandler = (req, res, next) => {
   upload.array('photos', MAX_PHOTOS)(req, res, (error: unknown) => (error ? next(uploadError(error)) : next()));
 };
@@ -137,9 +138,9 @@ export function jobRoutes(config: ServerConfig, db: Db, media: MediaLayout, opti
   router.post('/api/jobs', signedIn, perAccount, allowed, readUpload, async (req, res) => {
     const accountId = accountOf(res.locals);
     const body: unknown = req.body;
-    const { templateId, fields, background, format } =
+    const { templateId, fields, background, format, voice } =
       typeof body === 'object' && body !== null
-        ? (body as { templateId?: unknown; fields?: unknown; background?: unknown; format?: unknown })
+        ? (body as { templateId?: unknown; fields?: unknown; background?: unknown; format?: unknown; voice?: unknown })
         : {};
     const files = Array.isArray(req.files) ? req.files : [];
     const input = validateInput(templateId, parseFields(fields), files.length);
@@ -148,13 +149,18 @@ export function jobRoutes(config: ServerConfig, db: Db, media: MediaLayout, opti
     if (chosenBackground === null) throw new HttpError(400, 'invalid-background');
     const chosenFormat = parseFormat(format);
     if (chosenFormat === null) throw new HttpError(400, 'invalid-format');
+    const chosenVoice = parseVoice(voice);
+    if (chosenVoice === undefined) throw new HttpError(400, 'invalid-voice');
+    if (chosenVoice && config.voiceDir === undefined) throw new HttpError(400, 'voice-unavailable');
+    // Refused here rather than after the wait: the estimate errs long (see estimateSpeechSeconds).
+    if (chosenVoice && !estimateVoiceTimeline(templateById(input.templateId), input.fields, chosenVoice)) throw new HttpError(400, 'voice-too-long');
     if (files.some((file) => !sniffPhotoType(file.buffer))) throw new HttpError(400, 'photo-type');
 
     const jobId = randomUUID();
     try {
       for (const [index, file] of files.entries()) await cleanPhoto(file.buffer, media.tmp, media.photo(jobId, index));
       const now = new Date();
-      const created = await createJob(db, { id: jobId, accountId, templateId: input.templateId, fields: { ...input.fields }, background: chosenBackground, format: chosenFormat, photoCount: files.length }, now);
+      const created = await createJob(db, { id: jobId, accountId, templateId: input.templateId, fields: { ...input.fields }, background: chosenBackground, format: chosenFormat, voice: chosenVoice?.id ?? null, photoCount: files.length }, now);
       if (!created.ok) throw refusal(created);
       res.status(201).json({ job: jobView(created.job, now) });
     } catch (error) {

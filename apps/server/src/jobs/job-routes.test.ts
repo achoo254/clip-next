@@ -66,9 +66,9 @@ describe('server basics', () => {
 
   it('says whether the browser is signed in', async () => {
     const none = { name: null, picture: null, email: null };
-    expect((await app.http().get('/api/me')).body).toEqual({ signedIn: false, signInAvailable: false, ...none });
+    expect((await app.http().get('/api/me')).body).toEqual({ signedIn: false, signInAvailable: false, voiceAvailable: false, ...none });
     const { cookie } = await app.signIn('sub-1');
-    expect((await app.http().get('/api/me').set('Cookie', cookie)).body).toEqual({ signedIn: true, signInAvailable: false, ...none });
+    expect((await app.http().get('/api/me').set('Cookie', cookie)).body).toEqual({ signedIn: true, signInAvailable: false, voiceAvailable: false, ...none });
   });
 
   it('sends sign-in back with login=unavailable when no client secret is set', async () => {
@@ -194,6 +194,41 @@ describe('POST /api/jobs', () => {
     expect((await post(second.cookie)).status).toBe(201);
     const stored = await app.handle.db.select({ format: renderJobs.format }).from(renderJobs);
     expect(stored.map((j) => j.format).sort()).toEqual(['4:5', '9:16']);
+  });
+
+  it('stores the chosen voice, none when none is sent, and refuses an unknown one', async () => {
+    await app.close();
+    app = await startTestApp({ voiceDir: '/var/www/clip/tts' });
+    expect((await app.http().get('/api/me')).body).toMatchObject({ voiceAvailable: true });
+    const post = (cookie: string, voice?: string) => {
+      const req = app.http().post('/api/jobs').set('Cookie', cookie).set('Origin', ORIGIN).field('templateId', 'trich-dan').field('fields', JSON.stringify(QUOTE));
+      return voice === undefined ? req : req.field('voice', voice);
+    };
+    const first = await app.signIn('sub-1');
+    for (const bad of ['Trúc Ly', 'TRUC-LY', '../x', 'robot']) {
+      const res = await post(first.cookie, bad);
+      expect(res.status, bad).toBe(400);
+      expect(res.body, bad).toEqual({ error: 'invalid-voice' });
+    }
+    expect((await post(first.cookie, 'truc-ly')).status).toBe(201);
+    const second = await app.signIn('sub-2');
+    expect((await post(second.cookie)).status).toBe(201);
+    const stored = await app.handle.db.select({ voice: renderJobs.voice }).from(renderJobs);
+    expect(stored.map((j) => j.voice ?? 'none').sort()).toEqual(['none', 'truc-ly']);
+  });
+
+  it('refuses a voiced job when the voice is not installed, or when the text is too long to read', async () => {
+    const { cookie } = await app.signIn('sub-1');
+    const post = (fields: Record<string, string>) =>
+      app.http().post('/api/jobs').set('Cookie', cookie).set('Origin', ORIGIN).field('templateId', 'trich-dan').field('fields', JSON.stringify(fields)).field('voice', 'duc-tri');
+    expect((await post(QUOTE)).body).toEqual({ error: 'voice-unavailable' });
+    await app.close();
+    app = await startTestApp({ voiceDir: '/var/www/clip/tts' });
+    const again = await app.signIn('sub-1');
+    const long = 'Một câu trích dẫn khá dài để thử xem lời đọc có vượt quá thời lượng tối đa của một video hay không nhé bạn ơi';
+    const res = await app.http().post('/api/jobs').set('Cookie', again.cookie).set('Origin', ORIGIN).field('templateId', 'trich-dan').field('fields', JSON.stringify({ quote: long + ' ' + long.slice(0, 40), author: 'Một tác giả có tên rất dài' })).field('voice', 'duc-tri');
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'voice-too-long' });
   });
 
   it('allows one waiting job per account (429 job-in-progress)', async () => {

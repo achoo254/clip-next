@@ -42,6 +42,10 @@ export function PrivacyPage(): ReactNode {
             bạn xem lại danh sách của mình, và bị xoá cùng video sau 7 ngày.
           </p>
           <p>Phần xem trước chạy hoàn toàn trên máy bạn: ảnh không rời khỏi máy cho tới khi bạn bấm tạo video.</p>
+          <p>
+            Nếu bạn bật giọng đọc, chữ được đọc thành tiếng bằng AI ngay trên máy chủ của {name}, không gửi cho dịch vụ nào khác; tệp
+            tiếng đọc bị xoá khi video tạo xong.
+          </p>
           <h2>Video</h2>
           <p>Video chỉ bạn tải được (máy chủ kiểm tài khoản trước khi trả tệp) và tự xoá sau 7 ngày, tính từ lúc bạn bấm tạo.</p>
           <h2>Không có</h2>
@@ -73,6 +77,10 @@ export function PrivacyPage(): ReactNode {
             soon as the video is made. The text is kept with the video so you can see your list, and deleted with it after 7 days.
           </p>
           <p>The preview runs entirely on your device: photos do not leave it until you press create.</p>
+          <p>
+            If you turn the voice on, your text is read aloud by an AI voice on the {name} server itself and sent to no other service;
+            the voice recordings are deleted as soon as the video is made.
+          </p>
           <h2>Videos</h2>
           <p>Only you can download your videos (the server checks your account first); they are deleted 7 days after you press create.</p>
           <h2>None of this</h2>
@@ -144,6 +152,12 @@ const CREDITS: readonly { readonly what: string; readonly who: string; readonly 
     who: 'Komiku (Loyalty Freak Music), album "Poupi\'s Incredible Adventures"',
     licence: 'CC0 1.0',
     url: 'https://opengameart.org/content/poupis-incredible-adventures-full-album',
+  },
+  {
+    what: 'VieNeu-TTS v3 Nano (AI voice, 11 preset voices; revision aba295e)',
+    who: 'pnnbao97 / pnnbao-ump (VieNeu-TTS)',
+    licence: 'Apache License 2.0',
+    url: 'https://huggingface.co/pnnbao-ump/VieNeu-TTS-v3-Nano',
   },
 ];
 

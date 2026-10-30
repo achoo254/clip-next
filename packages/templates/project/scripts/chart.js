@@ -1,7 +1,8 @@
 // Chart layout: a Tử Vi birth chart as a card, 18 seconds. Scene 1: the zodiac animal in the medallion and line 1;
 // scene 2: the major star of Mệnh (or, without one, the cục emblem) in the medallion and line 2; scene 3: the three
 // pictures in a row and the reading, held long enough to be read. The pictures are chosen by id among the theme's
-// own files (the catalog whitelists the ids).
+// own files (the catalog whitelists the ids). A voiced video moves scenes 2 and 3 to when their words are read
+// (variable `cues`) and may last longer.
 (function () {
   "use strict";
   var T = window.ClipTemplate;
@@ -27,6 +28,10 @@
     return img;
   }
 
+  var at = T.cues(vars, 3, [0, 3.6, 7.2]);
+  var s2 = at[1];
+  var s3 = at[2];
+
   var animal = picture("animal");
   var star = picture("star");
   var cuc = picture("cuc");
@@ -38,7 +43,7 @@
   if (star) addImage(badge, cuc, "");
   var row = document.getElementById("row");
   [animal, star, cuc].forEach(function (src, index) {
-    T.animate(addImage(row, src, ""), "pop", 7.5 + index * 0.2, 0.6);
+    T.animate(addImage(row, src, ""), "pop", s3 + 0.3 + index * 0.2, 0.6);
   });
 
   var name = T.text(vars, "name");
@@ -53,15 +58,15 @@
   document.getElementById("line1-again").textContent = line1;
 
   // The first frame is the thumbnail on social players: scene 1 is on screen from 0 s.
-  T.animate(document.getElementById("scene-1"), "scene-out", 3.4, 0.4, "ease-in");
-  T.animate(first, "scene-out", 3.4, 0.4, "ease-in");
-  T.animate(second, "pop", 3.7, 0.8);
-  T.animateAll(document.getElementById("scene-2"), [["scene-in", 3.6, 0.4], ["scene-out", 6.9, 0.4, "ease-in"]]);
-  T.animate(hero, "scene-out", 6.9, 0.4, "ease-in");
-  T.animate(badge, "pop", 4.5, 0.6);
-  T.animate(document.getElementById("line2"), "rise", 4, 0.7);
-  T.animateAll(document.getElementById("scene-3"), [["scene-in", 7.2, 0.4]]);
-  T.animate(document.getElementById("card"), "rise", 7.5, 0.8);
+  T.animate(document.getElementById("scene-1"), "scene-out", s2 - 0.2, 0.4, "ease-in");
+  T.animate(first, "scene-out", s2 - 0.2, 0.4, "ease-in");
+  T.animate(second, "pop", s2 + 0.1, 0.8);
+  T.animateAll(document.getElementById("scene-2"), [["scene-in", s2, 0.4], ["scene-out", s3 - 0.3, 0.4, "ease-in"]]);
+  T.animate(hero, "scene-out", s3 - 0.3, 0.4, "ease-in");
+  T.animate(badge, "pop", s2 + 0.9, 0.6);
+  T.animate(document.getElementById("line2"), "rise", s2 + 0.4, 0.7);
+  T.animateAll(document.getElementById("scene-3"), [["scene-in", s3, 0.4]]);
+  T.animate(document.getElementById("card"), "rise", s3 + 0.3, 0.8);
 
   T.animate(document.getElementById("sticker-1"), "sticker-in", 0.4, 0.6);
   T.animate(document.getElementById("sticker-2"), "sticker-in", 0.8, 0.6);

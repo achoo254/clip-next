@@ -157,7 +157,7 @@ export function authRoutes(config: ServerConfig, db: Db): Router {
     const token = readSessionToken(req, config);
     const accountId = token ? await sessionAccount(db, token, new Date()) : null;
     const profile = accountId ? await accountProfile(db, accountId) : EMPTY_PROFILE;
-    res.json({ signedIn: accountId !== null, signInAvailable: auth !== null, ...profile });
+    res.json({ signedIn: accountId !== null, signInAvailable: auth !== null, voiceAvailable: config.voiceDir !== undefined, ...profile });
   });
 
   return router;

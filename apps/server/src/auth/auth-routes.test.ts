@@ -104,13 +104,14 @@ describe('sign-in with the account service', () => {
     expect((await http.get('/api/me')).body).toEqual({
       signedIn: true,
       signInAvailable: true,
+      voiceAvailable: false,
       name: 'Lan Anh',
       picture: 'https://lh3.googleusercontent.com/a/abc',
       email: 'lan@example.com',
     });
 
     expect((await http.post('/auth/logout').set('Origin', 'http://localhost:5293')).status).toBe(204);
-    expect((await http.get('/api/me')).body).toEqual({ signedIn: false, signInAvailable: true, name: null, picture: null, email: null });
+    expect((await http.get('/api/me')).body).toEqual({ signedIn: false, signInAvailable: true, voiceAvailable: false, name: null, picture: null, email: null });
   });
 
   it('refreshes the profile at each sign-in and keeps it when userinfo fails', async () => {

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/catalog.ts",
+    "./voice": "./src/voice.ts",
     "./project": "./src/project.ts",
     "./project/*": "./project/*",
     "./package.json": "./package.json"

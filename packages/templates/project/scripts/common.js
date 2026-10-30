@@ -70,6 +70,25 @@
     });
   }
 
+  /**
+   * When each scene comes in, for a voiced video: variable `cues` holds one start time (seconds) per scene, set from
+   * the length of each spoken line. Returns `fallback` (the layout's own rhythm) when there are no cues, or when
+   * they are not `count` increasing numbers.
+   */
+  function cues(vars, count, fallback) {
+    var raw = text(vars, "cues");
+    if (!/^[0-9]+(\.[0-9]+)?(,[0-9]+(\.[0-9]+)?)*$/.test(raw)) return fallback;
+    var starts = raw.split(",").map(Number);
+    if (starts.length !== count) return fallback;
+    for (var i = 1; i < starts.length; i += 1) if (!(starts[i] > starts[i - 1])) return fallback;
+    return starts;
+  }
+
+  /** Length of the composition in seconds (a voiced video lasts as long as its lines take to read). */
+  function duration() {
+    return Number(document.getElementById("root").getAttribute("data-duration"));
+  }
+
   useBackground(variables());
 
   window.ClipTemplate = {
@@ -79,5 +98,7 @@
     photos: photos,
     animate: animate,
     animateAll: animateAll,
+    cues: cues,
+    duration: duration,
   };
 })();

@@ -34,6 +34,8 @@ export interface JobList {
 export interface Me {
   readonly signedIn: boolean;
   readonly signInAvailable: boolean;
+  /** Whether the server can read videos aloud (its voice is installed). */
+  readonly voiceAvailable: boolean;
   /** From the account service at the last sign-in; null when signed out or never sent. */
   readonly name: string | null;
   readonly picture: string | null;
@@ -41,8 +43,8 @@ export interface Me {
 }
 
 /** The answer when not signed in (or when /api/me could not be read). */
-export function signedOut(signInAvailable: boolean): Me {
-  return { signedIn: false, signInAvailable, name: null, picture: null, email: null };
+export function signedOut(signInAvailable: boolean, voiceAvailable = false): Me {
+  return { signedIn: false, signInAvailable, voiceAvailable, name: null, picture: null, email: null };
 }
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -66,6 +68,7 @@ export function createJob(
   fields: Readonly<Record<string, string>>,
   background: number,
   format: VideoFormat,
+  voice: string | null,
   photos: readonly File[],
 ): Promise<{ job: Job }> {
   const form = new FormData();
@@ -73,6 +76,7 @@ export function createJob(
   form.set('fields', JSON.stringify(fields));
   form.set('background', String(background));
   form.set('format', format);
+  if (voice) form.set('voice', voice);
   for (const photo of photos) form.append('photos', photo, photo.name);
   return call<{ job: Job }>('/api/jobs', { method: 'POST', body: form });
 }

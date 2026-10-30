@@ -1059,6 +1059,11 @@ export interface CompositionChoice {
   readonly background?: number;
   /** The track; previewTrack when not given (the preview, `check:templates`). */
   readonly music?: MusicTrack;
+  /**
+   * Length of the video when it is not the layout's own: a voiced video lasts as long as its lines take to read
+   * (see voiceTimeline in voice.ts), at most MAX_DURATION_SECONDS.
+   */
+  readonly durationSeconds?: number;
 }
 
 /**
@@ -1067,8 +1072,19 @@ export interface CompositionChoice {
  */
 export function composeTemplateHtml(layoutHtml: string, spec: TemplateSpec, format: VideoFormat = '9:16', choice: CompositionChoice = {}): string {
   const music = choice.music ?? previewTrack(spec);
-  const layout = usesVideoBackground(spec, choice.background) ? withVideoBackground(layoutHtml, spec.durationSeconds) : layoutHtml;
+  const duration = choice.durationSeconds ?? spec.durationSeconds;
+  if (!(duration > 0 && duration <= MAX_DURATION_SECONDS)) throw new Error(`composition: duration ${duration} out of range`);
+  const timed = withDuration(layoutHtml, spec.durationSeconds, duration);
+  const layout = usesVideoBackground(spec, choice.background) ? withVideoBackground(timed, duration) : timed;
   return fitToFormat(layout, format).replaceAll('{{theme}}', spec.theme).replaceAll('{{music}}', music);
+}
+
+/** The layout lasting `duration` seconds instead of its own: the root, the stage and the music are all timed so. */
+function withDuration(layoutHtml: string, own: number, duration: number): string {
+  if (duration === own) return layoutHtml;
+  const from = `data-duration="${own}"`;
+  if (!layoutHtml.includes(from)) throw new Error(`layout: expected ${from}`);
+  return layoutHtml.replaceAll(from, `data-duration="${duration}"`);
 }
 
 export function isTemplateId(value: unknown): value is TemplateId {
@@ -1165,14 +1181,16 @@ export function validateInput(templateId: unknown, fields: unknown, photoCount: 
 }
 
 /**
- * The composition variables of one render: the background (its 1-based index, as text), every text field, then one
- * variable per photo slot of the template (the photo's URL or path, empty when there is none).
+ * The composition variables of one render: the background (its 1-based index, as text), every text field, one
+ * variable per photo slot of the template (the photo's URL or path, empty when there is none), then `cues`: when each
+ * scene comes in for a voiced video (formatCues in voice.ts), empty for the layout's own rhythm.
  */
 export function compositionVariables(
   spec: TemplateSpec,
   fields: Readonly<Record<string, string>>,
   photos: readonly string[],
   background = 1,
+  cues = '',
 ): Record<string, string> {
   const variables: Record<string, string> = { background: String(background) };
   for (const field of spec.fields) variables[field.id] = fields[field.id] ?? '';
@@ -1181,5 +1199,6 @@ export function compositionVariables(
       variables[id] = photos[index] ?? '';
     });
   }
+  variables.cues = cues;
   return variables;
 }

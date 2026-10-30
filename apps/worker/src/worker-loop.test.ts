@@ -31,6 +31,7 @@ async function queue(
   at = new Date(),
   background?: number,
   format?: string,
+  voice?: string,
 ): Promise<string> {
   const [account] = await handle.db.insert(accounts).values({ sub: randomUUID(), createdAt: at }).returning();
   if (!account) throw new Error('no account');
@@ -39,7 +40,7 @@ async function queue(
     await mkdir(media.inputDir(id), { recursive: true });
     await writeFile(media.photo(id, i), `photo ${i}`);
   }
-  const created = await createJob(handle.db, { id, accountId: account.id, templateId, fields, background, format, photoCount: photos }, at);
+  const created = await createJob(handle.db, { id, accountId: account.id, templateId, fields, background, format, voice, photoCount: photos }, at);
   if (!created.ok) throw new Error('refused');
   return id;
 }
@@ -64,7 +65,7 @@ describe('worker', () => {
     const id = await queue('chuc-mung', { line1: 'a', line2: 'b', line3: 'c' }, 2);
     const seen: RenderInput[] = [];
     expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('done');
-    expect(seen[0]?.variables).toEqual({ background: '1', line1: 'a', line2: 'b', line3: 'c', photo1: 'photos/photo-1.jpg', photo2: 'photos/photo-2.jpg', photo3: '' });
+    expect(seen[0]?.variables).toEqual({ background: '1', line1: 'a', line2: 'b', line3: 'c', photo1: 'photos/photo-1.jpg', photo2: 'photos/photo-2.jpg', photo3: '', cues: '' });
     expect(seen[0]?.photos).toEqual([media.photo(id, 0), media.photo(id, 1)]);
     expect(seen[0]?.output).toBe(media.video(id));
     expect(await job(id)).toMatchObject({ status: 'done', outputBytes: 3, durationSeconds: 12, renderMs: 5 });
@@ -98,6 +99,28 @@ describe('worker', () => {
     await queue('trich-dan', { quote: 'q', author: '' }, 0);
     expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('done');
     expect(seen[1]?.format).toBe('9:16');
+  });
+
+  it('reads a voiced job’s text in its voice, made readable, with no voice for other jobs', async () => {
+    await queue('chuc-mung', { line1: 'Chúc mừng 20/11', line2: '🎉', line3: 'Hẹn T2-T6' }, 1, new Date(), undefined, undefined, 'mai-anh');
+    const seen: RenderInput[] = [];
+    expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('done');
+    expect(seen[0]?.voice?.voice.preset).toBe('Mai Anh');
+    expect(seen[0]?.voice?.segments).toEqual(['Chúc mừng ngày 20 tháng 11', '🎉', 'Hẹn thứ 2 đến thứ 6']);
+    // What the video shows stays as typed.
+    expect(seen[0]?.variables).toMatchObject({ line1: 'Chúc mừng 20/11', line3: 'Hẹn T2-T6' });
+
+    await queue('trich-dan', { quote: 'q', author: '' }, 0);
+    expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('done');
+    expect(seen[1]?.voice).toBeNull();
+  });
+
+  it('fails a job whose voice is not one of the voices', async () => {
+    const id = await queue('trich-dan', { quote: 'q', author: '' }, 0, new Date(), undefined, undefined, 'robot');
+    const seen: RenderInput[] = [];
+    expect(await processNextJob({ db: handle.db, media, render: recordingRenderer(seen), log: quiet })).toBe('failed');
+    expect(await job(id)).toMatchObject({ status: 'failed', error: 'voice-failed' });
+    expect(seen).toHaveLength(0);
   });
 
   it('plays the track picked from the job id, the same one each time the job is rendered', async () => {

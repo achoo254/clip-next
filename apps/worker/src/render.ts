@@ -9,13 +9,18 @@
  *   ffmpeg re-encodes that to H.264 with libopenh264 (same choice as tieu-de-next's Shorts).
  * Both use hyperframes' low-memory profile and one Chrome worker; on Linux the tools run under `nice` so the shared
  * server's other apps keep their CPU.
+ *
+ * A voiced video is read aloud first (voice.ts), in a process that exits before Chrome starts, so the two never hold
+ * memory at the same time; the recordings time the scenes, and the final ffmpeg step mixes them over the music.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { cp, mkdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { FORMAT_SIZES, MAX_DURATION_SECONDS, type MusicTrack, type TemplateId, type VideoFormat } from '@clip/templates';
+import { FORMAT_SIZES, MAX_DURATION_SECONDS, templateById, type MusicTrack, type TemplateId, type VideoFormat } from '@clip/templates';
 import { prepareProject } from '@clip/templates/project';
+import { formatCues, voiceTimeline, type Voice } from '@clip/templates/voice';
+import { recordVoice, voiceMixArgs, type Recording, type VoiceStats } from './voice';
 
 export interface RenderInput {
   readonly templateId: TemplateId;
@@ -29,6 +34,8 @@ export interface RenderInput {
   readonly variables: Readonly<Record<string, string>>;
   /** Absolute paths of the photos, copied into the project as `photos/<file name>`. */
   readonly photos: readonly string[];
+  /** The voice reading the video, and what it reads per segment (voiceSegments through speechText); null: no voice. */
+  readonly voice: { readonly voice: Voice; readonly segments: readonly string[] } | null;
   /** Empty scratch directory for this render (removed afterwards). */
   readonly workDir: string;
   /** Final MP4 path; written by rename once the video is checked. */
@@ -45,18 +52,22 @@ export interface RenderOptions {
   /** ffmpeg and ffprobe to use (for hyperframes too); unset: the ones on PATH. */
   readonly ffmpegPath?: string;
   readonly ffprobePath?: string;
+  /** VieNeu-TTS's Python environment and model (VOICE_DIR); unset: a voiced job fails with `voice-failed`. */
+  readonly voiceDir?: string;
 }
 
 export interface RenderResult {
   readonly bytes: number;
   readonly durationSeconds: number;
   readonly renderMs: number;
+  /** The synthesis's own report, for the log (voiced videos only). */
+  readonly voice?: VoiceStats | null;
 }
 
 /** A render failure with a stable code (stored on the job) and the tail of the tool's output (logged only). */
 export class RenderError extends Error {
   constructor(
-    readonly code: 'render-failed' | 'encode-failed' | 'timeout' | 'aborted' | 'bad-output',
+    readonly code: 'render-failed' | 'encode-failed' | 'voice-failed' | 'voice-too-long' | 'timeout' | 'aborted' | 'bad-output',
     readonly detail: string,
   ) {
     super(code);
@@ -161,11 +172,12 @@ export interface RunOptions {
 }
 
 /**
- * Runs a tool to completion; rejects with the last lines of its output. The tool leads its own process group, so a
- * timeout or an abort reaches everything it started that stayed in the group (ffmpeg, helpers): SIGTERM first, so
- * hyperframes can close the Chrome it launched (Chrome has a group of its own), then SIGKILL after the grace period.
+ * Runs a tool to completion and resolves with the end of its output; rejects with the last lines of it. The tool
+ * leads its own process group, so a timeout or an abort reaches everything it started that stayed in the group
+ * (ffmpeg, helpers): SIGTERM first, so hyperframes can close the Chrome it launched (Chrome has a group of its own),
+ * then SIGKILL after the grace period.
  */
-export function runTool(command: string, args: readonly string[], options: RunOptions): Promise<void> {
+export function runTool(command: string, args: readonly string[], options: RunOptions): Promise<string> {
   const [bin, binArgs] = niced(command, args);
   const grace = options.graceMs ?? KILL_GRACE_MS;
   return new Promise((resolve, reject) => {
@@ -203,7 +215,7 @@ export function runTool(command: string, args: readonly string[], options: RunOp
         signalGroup(child.pid, 'SIGKILL');
         if (killTimer) clearTimeout(killTimer);
         reject(new RenderError(stopped, output.slice(-800)));
-      } else if (exit === 0) resolve();
+      } else if (exit === 0) resolve(output);
       else reject(new RenderError(options.code, `exit ${String(exit)}: ${output.slice(-800)}`));
     });
   });
@@ -249,11 +261,16 @@ export async function renderVideo(input: RenderInput, options: RenderOptions): P
   const { workDir } = input;
   await mkdir(workDir, { recursive: true });
   try {
-    await prepareProject(input.templateId, workDir, input.format, { background: input.background, music: input.music });
+    const voiced = input.voice ? await readAloud(input.templateId, input.voice, path.join(workDir, 'voice'), deadline, options) : null;
+    await prepareProject(input.templateId, workDir, input.format, {
+      background: input.background,
+      music: input.music,
+      ...(voiced ? { durationSeconds: voiced.durationSeconds } : {}),
+    });
     await mkdir(path.join(workDir, 'photos'), { recursive: true });
     for (const photo of input.photos) await cp(photo, path.join(workDir, 'photos', path.basename(photo)));
     const variablesFile = path.join(workDir, 'variables.json');
-    await writeFile(variablesFile, JSON.stringify(input.variables));
+    await writeFile(variablesFile, JSON.stringify(voiced ? { ...input.variables, cues: voiced.cues } : input.variables));
 
     const ffmpeg = options.ffmpegPath ?? 'ffmpeg';
     const env = hyperframesEnv(options.chromePath, options);
@@ -266,10 +283,7 @@ export async function renderVideo(input: RenderInput, options: RenderOptions): P
     );
 
     const mp4 = path.join(workDir, 'video.mp4');
-    const encode = direct
-      ? ['-c', 'copy']
-      : ['-c:v', 'libopenh264', '-b:v', '3500k', '-maxrate', '4500k', '-pix_fmt', 'yuv420p', '-threads', '2', '-c:a', 'aac', '-b:a', '128k'];
-    await runTool(ffmpeg, ['-v', 'error', '-y', '-i', rendered, ...encode, '-movflags', '+faststart', mp4], {
+    await runTool(ffmpeg, finalEncodeArgs(rendered, direct, voiced?.mix ?? null, mp4), {
       env,
       deadline,
       code: 'encode-failed',
@@ -283,8 +297,62 @@ export async function renderVideo(input: RenderInput, options: RenderOptions): P
     const { size } = await stat(mp4);
     await mkdir(path.dirname(input.output), { recursive: true });
     await rename(mp4, input.output);
-    return { bytes: size, durationSeconds: Math.round(probed.duration * 100) / 100, renderMs: Date.now() - started };
+    return {
+      bytes: size,
+      durationSeconds: Math.round(probed.duration * 100) / 100,
+      renderMs: Date.now() - started,
+      ...(input.voice ? { voice: voiced?.stats ?? null } : {}),
+    };
   } finally {
     await rm(workDir, { recursive: true, force: true });
   }
+}
+
+interface Voiced {
+  readonly cues: string;
+  readonly durationSeconds: number;
+  /** null when no segment had anything to read: the video keeps its music alone. */
+  readonly mix: { readonly inputs: string[]; readonly filter: string } | null;
+  readonly stats: VoiceStats | null;
+}
+
+/**
+ * Reads the video's segments aloud (before Chrome starts), and times the scenes from the recordings: `voice-failed`
+ * when the synthesis does not work, `voice-too-long` when the lines take longer than a video may last.
+ */
+async function readAloud(templateId: TemplateId, voice: NonNullable<RenderInput['voice']>, dir: string, deadline: number, options: RenderOptions): Promise<Voiced> {
+  const { voiceDir } = options;
+  if (!voiceDir) throw new RenderError('voice-failed', 'VOICE_DIR is not set');
+  let recording: Recording;
+  try {
+    recording = await recordVoice(voice.segments, voice.voice, dir, voiceDir, (command, args, env) =>
+      runTool(command, args, { env, deadline, code: 'voice-failed', signal: options.signal }),
+    );
+  } catch (error) {
+    if (error instanceof RenderError) throw error;
+    throw new RenderError('voice-failed', error instanceof Error ? error.message : String(error));
+  }
+  const timeline = voiceTimeline(templateById(templateId), recording.seconds);
+  if (!timeline) throw new RenderError('voice-too-long', `recordings: ${recording.seconds.map((s) => s.toFixed(2)).join(', ')} s`);
+  const spoken = recording.files.flatMap((file, i) => (file === null ? [] : [{ file, start: timeline.voiceStarts[i] ?? 0 }]));
+  return {
+    cues: formatCues(timeline),
+    durationSeconds: timeline.durationSeconds,
+    mix: spoken.length > 0 ? voiceMixArgs(spoken.map((s) => s.file), spoken.map((s) => s.start)) : null,
+    stats: recording.stats,
+  };
+}
+
+/**
+ * The ffmpeg arguments that turn hyperframes' output into the final MP4: the video copied (MP4 path) or encoded to
+ * H.264 (WebM path); the audio copied, encoded, or, for a voiced video, the music ducked under the voice.
+ */
+export function finalEncodeArgs(rendered: string, direct: boolean, mix: { readonly inputs: readonly string[]; readonly filter: string } | null, output: string): string[] {
+  const video = direct ? ['-c:v', 'copy'] : ['-c:v', 'libopenh264', '-b:v', '3500k', '-maxrate', '4500k', '-pix_fmt', 'yuv420p', '-threads', '2'];
+  const audio = mix
+    ? ['-filter_complex', mix.filter, '-map', '0:v:0', '-map', '[mix]', '-c:a', 'aac', '-b:a', '160k']
+    : direct
+      ? ['-c:a', 'copy']
+      : ['-c:a', 'aac', '-b:a', '128k'];
+  return ['-v', 'error', '-y', '-i', rendered, ...(mix?.inputs ?? []), ...video, ...audio, '-movflags', '+faststart', output];
 }

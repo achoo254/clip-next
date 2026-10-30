@@ -8,6 +8,7 @@ import {
   type TemplateId,
   type VideoFormat,
 } from '@clip/templates';
+import { formatCues, type VoiceTimeline } from '@clip/templates/voice';
 import chart from '@clip/templates/project/layouts/chart.html?raw';
 import greeting from '@clip/templates/project/layouts/greeting.html?raw';
 import quick from '@clip/templates/project/layouts/quick.html?raw';
@@ -30,6 +31,11 @@ interface Props {
   /** The chosen background, 1-based (see backgroundFile). */
   readonly background: number;
   onBackgroundChange(n: number): void;
+  /**
+   * The estimated timeline when the video will be read aloud: the preview takes its rhythm and length, but has no
+   * voice (that is made on the server), and says so.
+   */
+  readonly voiceTimeline: VoiceTimeline | null;
 }
 
 /**
@@ -37,15 +43,19 @@ interface Props {
  * theme has several backgrounds, previous/next buttons step through them; a background's picture is only fetched
  * once it is shown, so the page loads no more than before.
  */
-export function TemplatePreview({ templateId, format, fields, photoUrls, background, onBackgroundChange }: Props): ReactNode {
+export function TemplatePreview({ templateId, format, fields, photoUrls, background, onBackgroundChange, voiceTimeline }: Props): ReactNode {
   const { t } = useI18n();
   const [ready, setReady] = useState(false);
   const spec = templateById(templateId);
   const size = FORMAT_SIZES[format];
   const target = useMemo(
     () =>
-      previewDocument(composeTemplateHtml(LAYOUT_HTML[spec.layout], spec, format, { background }), compositionVariables(spec, fields, photoUrls, background), window.location.origin),
-    [spec, format, fields, photoUrls, background],
+      previewDocument(
+        composeTemplateHtml(LAYOUT_HTML[spec.layout], spec, format, { background, ...(voiceTimeline ? { durationSeconds: voiceTimeline.durationSeconds } : {}) }),
+        compositionVariables(spec, fields, photoUrls, background, voiceTimeline ? formatCues(voiceTimeline) : ''),
+        window.location.origin,
+      ),
+    [spec, format, fields, photoUrls, background, voiceTimeline],
   );
   // Wraps around: after the last background comes the first.
   const step = (delta: number): void => onBackgroundChange(((background - 1 + delta + spec.backgrounds) % spec.backgrounds) + 1);
@@ -88,7 +98,9 @@ export function TemplatePreview({ templateId, format, fields, photoUrls, backgro
           </button>
         </div>
       ) : null}
-      <figcaption className="muted small">{t('create.previewNote')}</figcaption>
+      <figcaption className="muted small">
+        {t('create.previewNote')} {voiceTimeline ? <span data-id="preview-voice-note">{t('create.previewVoiceNote')}</span> : null}
+      </figcaption>
     </figure>
   );
 }

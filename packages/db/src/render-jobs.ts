@@ -19,6 +19,8 @@ export interface NewJob {
   readonly background?: number;
   /** Chosen video shape (already validated); 9:16 when omitted. */
   readonly format?: string;
+  /** Id of the voice reading the text (already validated); none when omitted. */
+  readonly voice?: string | null;
   readonly photoCount: number;
 }
 

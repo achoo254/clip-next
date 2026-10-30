@@ -17,6 +17,7 @@ import {
   type TextField,
   type VideoFormat,
 } from '@clip/templates';
+import { estimateSpeechSeconds, estimateVoiceTimeline, voiceById, voiceSegments, type Voice } from '@clip/templates/voice';
 import { createJob, signInUrl } from '../api';
 import { useAccount } from '../account';
 import { errorMessage } from '../error-message';
@@ -26,6 +27,7 @@ import { useHere } from '../layout';
 import { SignInTicket } from '../sign-in-ticket';
 import { TemplatePreview } from '../preview/template-preview';
 import { TemplatePicker } from './template-picker';
+import { VoicePicker } from './voice-picker';
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -80,13 +82,16 @@ export function CreatePage(): ReactNode {
   const requested = params.get('t');
   const templateId: TemplateId = isTemplateId(requested) ? requested : 'chuc-mung';
   const spec = templateById(templateId);
-  // The chosen background and shape ride in the address (`&bg=3&f=1:1`), so they survive the sign-in round trip;
-  // picking another template drops them (back to the first background, 9:16). Anything invalid there is the default.
+  // The chosen background, shape and voice ride in the address (`&bg=3&f=1:1&v=truc-ly`), so they survive the
+  // sign-in round trip; picking another template drops the background and shape (back to the first background, 9:16)
+  // but keeps the voice. Anything invalid there is the default (no voice). The voice is offered only when the server
+  // has it installed.
   const background = parseBackground(spec, params.get('bg')) ?? 1;
   const format: VideoFormat = parseFormat(params.get('f')) ?? '9:16';
-  const setChoices = (bg: number, f: VideoFormat): void =>
-    setParams({ t: templateId, ...(bg === 1 ? {} : { bg: String(bg) }), ...(f === '9:16' ? {} : { f }) }, { replace: true });
-  const setBackground = (n: number): void => setChoices(n, format);
+  const voice: Voice | null = me?.voiceAvailable === true ? (voiceById(params.get('v') ?? '') ?? null) : null;
+  const setChoices = (bg: number, f: VideoFormat, v: Voice | null): void =>
+    setParams({ t: templateId, ...(bg === 1 ? {} : { bg: String(bg) }), ...(f === '9:16' ? {} : { f }), ...(v ? { v: v.id } : {}) }, { replace: true });
+  const setBackground = (n: number): void => setChoices(n, format, voice);
   // A link may fill the template in (`/tao?t=la-so&animal=mui#name=Lan&line1=…`, e.g. from the Tử Vi app; free text
   // rides in the #fragment, see linkParams): its valid values replace this layout's draft when the page opens.
   const link = useMemo(() => linkParams(location.search, location.hash), [location.search, location.hash]);
@@ -136,6 +141,13 @@ export function CreatePage(): ReactNode {
     );
   }, [fields, spec, templateId, locale]);
 
+  // What the voice would read (the fields as the video shows them), its estimated length and the video's rhythm.
+  const voiceEstimate = useMemo(() => (voice ? estimateVoiceTimeline(spec, previewFields, voice) : null), [voice, spec, previewFields]);
+  const speechSeconds = useMemo(
+    () => (voice ? voiceSegments(spec, previewFields).reduce((total, text) => total + estimateSpeechSeconds(text, voice), 0) : 0),
+    [voice, spec, previewFields],
+  );
+
   const setField = (id: string, value: string): void => setDrafts((d) => ({ ...d, [spec.layout]: { ...(d[spec.layout] ?? {}), [id]: value } }));
 
   const addPhotos = (list: FileList | null): void => {
@@ -164,9 +176,10 @@ export function CreatePage(): ReactNode {
       const code = check.error === 'missing-field' || check.error === 'field-too-long' || check.error === 'too-few-photos' ? check.error : 'generic';
       return setMessage({ kind: 'error', text: code === 'generic' ? t('error.generic') : t(`error.${code}`, { min: spec.photos.min }) });
     }
+    if (voice && !estimateVoiceTimeline(spec, check.fields, voice)) return setMessage({ kind: 'error', text: t('error.voice-too-long') });
     setBusy(true);
     try {
-      await createJob(templateId, check.fields, background, format, usable.map((p) => p.file));
+      await createJob(templateId, check.fields, background, format, voice?.id ?? null, usable.map((p) => p.file));
       setMessage({ kind: 'ok', text: t('create.queued') });
     } catch (error) {
       setMessage({ kind: 'error', text: errorMessage(error, t, locale, spec.photos.min) });
@@ -180,7 +193,7 @@ export function CreatePage(): ReactNode {
       <h1>{t('create.title')}</h1>
       <div className="create-grid">
         <form className="card create-form" onSubmit={(e) => void submit(e)} data-id="create-form">
-          <TemplatePicker value={templateId} onChange={(id) => setParams({ t: id }, { replace: true })} />
+          <TemplatePicker value={templateId} onChange={(id) => setParams({ t: id, ...(voice ? { v: voice.id } : {}) }, { replace: true })} />
           <p className="muted small template-description" ref={filledRef}>
             {spec.description[locale]}
           </p>
@@ -259,7 +272,11 @@ export function CreatePage(): ReactNode {
             ) : null}
           </div>
 
-          <FormatPicker value={format} onChange={(f) => setChoices(background, f)} />
+          <FormatPicker value={format} onChange={(f) => setChoices(background, f, voice)} />
+
+          {me?.voiceAvailable === true ? (
+            <VoicePicker value={voice} onChange={(v) => setChoices(background, format, v)} estimate={voiceEstimate} speechSeconds={speechSeconds} />
+          ) : null}
 
           {message ? (
             <p className={`alert ${message.kind === 'ok' ? 'alert-success' : 'alert-error'}`} role={message.kind === 'ok' ? 'status' : 'alert'} data-id="create-message">
@@ -279,7 +296,7 @@ export function CreatePage(): ReactNode {
 
         <section className="preview-column" aria-label={t('create.preview')} data-id="preview-column">
           <h2 className="label">{t('create.preview')}</h2>
-          <TemplatePreview templateId={templateId} format={format} fields={previewFields} photoUrls={photoUrls} background={background} onBackgroundChange={setBackground} />
+          <TemplatePreview templateId={templateId} format={format} fields={previewFields} photoUrls={photoUrls} background={background} onBackgroundChange={setBackground} voiceTimeline={voiceEstimate} />
         </section>
       </div>
     </div>

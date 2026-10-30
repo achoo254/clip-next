@@ -18,6 +18,9 @@ const KNOWN: ReadonlySet<string> = new Set([
   'photo-blank',
   'invalid-background',
   'invalid-format',
+  'invalid-voice',
+  'voice-unavailable',
+  'voice-too-long',
   'server-busy',
   'too-many-requests',
 ]);

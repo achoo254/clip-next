@@ -18,7 +18,14 @@ const worker = startWorker({
   pollMs: config.pollMs,
   log,
   render: (input, signal) =>
-    renderVideo(input, { chromePath: config.chromePath, ffmpegPath: config.ffmpegPath, ffprobePath: config.ffprobePath, timeoutMs: RENDER_TIMEOUT_MS, signal }),
+    renderVideo(input, {
+      chromePath: config.chromePath,
+      ffmpegPath: config.ffmpegPath,
+      ffprobePath: config.ffprobePath,
+      voiceDir: config.voiceDir,
+      timeoutMs: RENDER_TIMEOUT_MS,
+      signal,
+    }),
   // A render that timed out may have left Chrome behind (it runs in a process group of its own): exit, and systemd
   // (KillMode=mixed, Restart=on-failure) kills whatever is left in the cgroup and starts a clean worker.
   onTimeout: () => {
@@ -26,7 +33,7 @@ const worker = startWorker({
     void database.close().finally(() => process.exit(1));
   },
 });
-console.log(`clip worker polling every ${config.pollMs} ms; chrome: ${config.chromePath ?? 'hyperframes default'}`);
+console.log(`clip worker polling every ${config.pollMs} ms; chrome: ${config.chromePath ?? 'hyperframes default'}; voice: ${config.voiceDir ?? 'off'}`);
 
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
   // The job in hand is aborted (its tools get SIGTERM, then SIGKILL after a grace period) and put back in the queue;

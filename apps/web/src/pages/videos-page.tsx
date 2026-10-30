@@ -64,7 +64,7 @@ function JobCard({ job }: { readonly job: Job }): ReactNode {
         </>
       ) : null}
       {job.status === 'done' && job.expired ? <p className="muted small">{t('videos.expired')}</p> : null}
-      {job.status === 'failed' ? <p className="muted small">{t('videos.failedNote')}</p> : null}
+      {job.status === 'failed' ? <p className="muted small">{t(job.error?.startsWith('voice-') ? 'videos.failedVoice' : 'videos.failedNote')}</p> : null}
     </li>
   );
 }

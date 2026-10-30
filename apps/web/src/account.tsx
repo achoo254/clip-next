@@ -27,7 +27,7 @@ export function AccountProvider({ children }: { readonly children: ReactNode }):
   }, []);
   const signOut = useCallback(async () => {
     await apiSignOut().catch(() => null);
-    setMe((current) => signedOut(current?.signInAvailable ?? true));
+    setMe((current) => signedOut(current?.signInAvailable ?? true, current?.voiceAvailable ?? false));
   }, []);
   const value = useMemo(() => ({ me, signOut }), [me, signOut]);
   return <AccountContext value={value}>{children}</AccountContext>;

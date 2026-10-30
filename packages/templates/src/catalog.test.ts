@@ -210,7 +210,7 @@ describe('templates', () => {
 
   it('maps photos to the photo variables in order, and the background to its index', () => {
     const vars = compositionVariables(templateById('chuc-mung'), { line1: 'a' }, ['photos/photo-1.jpg']);
-    expect(vars).toEqual({ background: '1', line1: 'a', line2: '', line3: '', photo1: 'photos/photo-1.jpg', photo2: '', photo3: '' });
+    expect(vars).toEqual({ background: '1', line1: 'a', line2: '', line3: '', photo1: 'photos/photo-1.jpg', photo2: '', photo3: '', cues: '' });
     expect(compositionVariables(templateById('chuc-mung'), {}, [], 4).background).toBe('4');
   });
 });

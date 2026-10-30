@@ -2,6 +2,7 @@ import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { claimNextJob, failStuckJobs, markJobDone, markJobFailed, requeueJob, type Db, type MediaLayout, type RenderJob } from '@clip/db';
 import { compositionVariables, isTemplateId, parseBackground, parseFormat, pickTrack, templateById } from '@clip/templates';
+import { parseVoice, speechText, voiceSegments } from '@clip/templates/voice';
 import { RenderError, type RenderInput, type RenderResult } from './render';
 
 /** Renders one job's video; `renderVideo` in production, injectable for tests of the queue. */
@@ -31,7 +32,8 @@ export type JobOutcome = 'idle' | 'done' | 'failed' | 'requeued';
 
 /**
  * The render input of a job: its fields, background and photos as composition variables, photos copied as `photos/…`,
- * its format, and its track, picked from the job id so a job rendered again gets the same one.
+ * its format, its track, picked from the job id so a job rendered again gets the same one, and its voice with the
+ * text it reads.
  */
 export function renderInputFor(job: RenderJob, media: MediaLayout): RenderInput {
   if (!isTemplateId(job.templateId)) throw new RenderError('render-failed', `unknown template ${job.templateId}`);
@@ -40,6 +42,8 @@ export function renderInputFor(job: RenderJob, media: MediaLayout): RenderInput 
   if (background === null) throw new RenderError('render-failed', `background ${job.background} not in ${job.templateId}`);
   const format = parseFormat(job.format);
   if (format === null) throw new RenderError('render-failed', `unknown format ${job.format}`);
+  const voice = parseVoice(job.voice);
+  if (voice === undefined) throw new RenderError('voice-failed', `unknown voice ${String(job.voice)}`);
   const photos = Array.from({ length: job.photoCount }, (_, index) => media.photo(job.id, index));
   const variables = compositionVariables(
     spec,
@@ -47,7 +51,17 @@ export function renderInputFor(job: RenderJob, media: MediaLayout): RenderInput 
     photos.map((file) => `photos/${path.basename(file)}`),
     background,
   );
-  return { templateId: job.templateId, format, background, music: pickTrack(spec, job.id), variables, photos, workDir: path.join(media.tmp, `render-${job.id}`), output: media.video(job.id) };
+  return {
+    templateId: job.templateId,
+    format,
+    background,
+    music: pickTrack(spec, job.id),
+    variables,
+    photos,
+    voice: voice ? { voice, segments: voiceSegments(spec, job.fields).map(speechText) } : null,
+    workDir: path.join(media.tmp, `render-${job.id}`),
+    output: media.video(job.id),
+  };
 }
 
 /**
@@ -61,14 +75,17 @@ export async function processNextJob(deps: WorkerDeps): Promise<JobOutcome> {
   if (deps.signal?.aborted) return 'idle';
   const job = await claimNextJob(deps.db, now());
   if (!job) return 'idle';
-  deps.log.info(`job ${job.id} rendering (${job.templateId}, ${job.photoCount} photo(s))`);
+  deps.log.info(`job ${job.id} rendering (${job.templateId}, ${job.photoCount} photo(s)${job.voice ? `, voice ${job.voice}` : ''})`);
   let outcome: JobOutcome;
   let timedOut = false;
   try {
     const result = await deps.render(renderInputFor(job, deps.media), deps.signal ?? new AbortController().signal);
     const kept = await markJobDone(deps.db, job.id, { outputBytes: result.bytes, durationSeconds: result.durationSeconds, renderMs: result.renderMs }, now());
     if (kept) {
-      deps.log.info(`job ${job.id} done in ${result.renderMs} ms (${result.durationSeconds} s video, ${result.bytes} bytes)`);
+      const voice = result.voice
+        ? `; voice ${result.voice.audioSeconds} s read in ${result.voice.loadSeconds} + ${result.voice.synthSeconds} s, peak ${result.voice.peakRssMb} MB`
+        : '';
+      deps.log.info(`job ${job.id} done in ${result.renderMs} ms (${result.durationSeconds} s video, ${result.bytes} bytes${voice})`);
       outcome = 'done';
     } else {
       // Marked stuck while this render ran long: the job is failed for the user, so its file must not linger.
