@@ -30,6 +30,10 @@ cố định của nó (`music`, một trong bốn bản nhạc chung), ở cả
 một bản trong nhóm, chọn theo id của job nên render lại vẫn ra đúng bản đó; xem trước phát bản đầu của nhóm. Thêm nhạc là thêm
 `<bản>.m4a` vào `project/assets/music/` và id của nó vào nhóm. Thêm mẫu là thêm
 một chủ đề, không thêm bố cục. Không có hình trang trí vẽ bằng CSS; gradient và lớp nền mờ chỉ để chữ dễ đọc.
+Giọng đọc (tuỳ chọn, tắt sẵn): một trong 11 giọng tiếng Việt của VieNeu-TTS v3 Nano (mặc định Trúc Ly), đọc trên CPU
+của máy chủ ngay trước khi render, không gửi chữ ra ngoài (`packages/templates/src/voice.ts`, `apps/worker/src/voice.ts`,
+`apps/worker/tts/`). Mỗi dòng hiện đúng lúc được đọc, video dài theo lời đọc (tối đa 20 giây), nhạc nhỏ lại dưới
+lời. Xem trước không có tiếng đọc và nói rõ điều đó; nhịp chữ trong xem trước là ước tính theo giọng đã chọn.
 Video ra ba khổ: dọc 9:16 (1080×1920, khổ bố cục được vẽ), 4:5 (1080×1350) và vuông (1080×1080); hai khổ sau thu
 khung 9:16 nguyên vẹn theo chiều cao, đặt giữa, hai bên là nền của mẫu làm mờ (`composeTemplateHtml`), nên không bố
 cục nào phải vẽ lại và không mất chữ hay ảnh.
@@ -39,6 +43,8 @@ CC0.
 ## Giới hạn
 
 - Phải đăng nhập mới render; xem trước thì không cần.
+- Có giọng đọc: lời đọc ước tính (theo tốc độ đo của giọng đã chọn, cộng 15 %) phải vừa 20 giây, nếu không UI và
+  server từ chối (`voice-too-long`); giọng đọc chỉ có khi máy chủ đặt `VOICE_DIR`.
 - Mỗi tài khoản 5 video mỗi ngày theo giờ Việt Nam (job lỗi không tính), một job đang chờ hoặc đang render tại
   một thời điểm (unique index trong DB). Vượt giới hạn: HTTP 429 `daily-limit` (kèm giờ mở lại) hoặc
   `job-in-progress`, UI hiện lời nhắn.
