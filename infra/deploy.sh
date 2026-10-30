@@ -162,11 +162,11 @@ for name in [line.split()[1] for line in open(sys.argv[1])]:
 ' \$src/vieneu-v3-nano.sha256
 		(cd models/vieneu-v3-nano && sha256sum -c --quiet \$src/vieneu-v3-nano.sha256)
 		as_clip bin/uv cache clean --quiet
-		rm -rf .uv-cache .hf-cache models/vieneu-v3-nano/.cache
+		rm -rf .uv-cache .hf-cache .cache models/vieneu-v3-nano/.cache
 
 		echo '{\"voice\": \"Trúc Ly\", \"lines\": [\"Clip xin chào, giọng đọc đã sẵn sàng.\"]}' > /tmp/clip-voice/request.json
 		install -d -o clip -g clip /tmp/clip-voice/out
-		runuser -u clip -- env HOME=\$T HF_HUB_OFFLINE=1 nice -n 15 pyenv/bin/python -I \$src/synthesize.py \\
+		runuser -u clip -- env HOME=/tmp/clip-voice/out HF_HUB_OFFLINE=1 nice -n 15 pyenv/bin/python -I \$src/synthesize.py \\
 			--request /tmp/clip-voice/request.json --model-dir models/vieneu-v3-nano --out-dir /tmp/clip-voice/out --threads 2 | tail -1
 		rm -rf /tmp/clip-voice
 		du -sh python pyenv models

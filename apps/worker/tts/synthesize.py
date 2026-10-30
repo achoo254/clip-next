@@ -56,6 +56,24 @@ def read_request(path: str) -> tuple[str, list[str]]:
     return voice, lines
 
 
+def release_page_cache(model_dir: str) -> None:
+    """Drops the model files from the page cache: it is charged to the worker's memory limit, and Chrome comes next."""
+    if not hasattr(os, "posix_fadvise"):
+        return
+    for name in os.listdir(model_dir):
+        path = os.path.join(model_dir, name)
+        if not os.path.isfile(path):
+            continue
+        try:
+            fd = os.open(path, os.O_RDONLY)
+            try:
+                os.posix_fadvise(fd, 0, 0, os.POSIX_FADV_DONTNEED)
+            finally:
+                os.close(fd)
+        except OSError:
+            pass  # Only an optimisation: the kernel reclaims the cache anyway when it needs to.
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--request", required=True)
@@ -98,6 +116,7 @@ def main() -> None:
         sf.write(os.path.join(args.out_dir, f"line-{index}.wav"), samples, tts.sample_rate, subtype="PCM_16")
 
     done = time.monotonic()
+    release_page_cache(args.model_dir)
     print(
         json.dumps(
             {
