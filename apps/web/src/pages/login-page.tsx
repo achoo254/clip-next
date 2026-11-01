@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { safeReturnPath, signInUrl } from '../api';
+import { safeReturnPath } from '../api';
 import { useAccount } from '../account';
 import { useI18n } from '../i18n';
 import { SignInTicket } from '../sign-in-ticket';
@@ -10,7 +10,7 @@ import { SignInTicket } from '../sign-in-ticket';
  * account service, back to the page the visitor came from (`?return=`).
  */
 export function LoginPage(): ReactNode {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const { me } = useAccount();
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -24,7 +24,7 @@ export function LoginPage(): ReactNode {
   return (
     <div className="login" data-id="login">
       <img className="login-mascot" src="/clip-mascot-384.webp" width="192" height="192" alt="" />
-      <SignInTicket signInHref={signInUrl(returnTo, locale)} title={t('signIn.title')} description={t('signIn.lead')} headingLevel={1}>
+      <SignInTicket returnTo={returnTo} title={t('signIn.title')} description={t('signIn.lead')} headingLevel={1}>
         {me !== null && !me.signInAvailable ? (
           <p className="alert alert-warning" role="status" data-id="sign-in-unavailable">
             {t('auth.unavailable')}

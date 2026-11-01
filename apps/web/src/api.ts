@@ -96,9 +96,12 @@ export function loginPageHref(here: string): string {
   return back === '/' ? LOGIN_PATH : `${LOGIN_PATH}?${new URLSearchParams({ return: back }).toString()}`;
 }
 
-/** Sign-in page of the account service, coming back to `returnTo`. */
-export function signInUrl(returnTo: string, lang: string): string {
-  return `/auth/login?${new URLSearchParams({ return: safeReturnPath(returnTo), lang }).toString()}`;
+/**
+ * The account service, coming back to `returnTo`: its sign-in page, or with `signUp` its "create account" page (the
+ * server adds `prompt=create`; only sign-up buttons send it, so presses can be counted apart).
+ */
+export function signInUrl(returnTo: string, lang: string, signUp = false): string {
+  return `/auth/login?${new URLSearchParams({ return: safeReturnPath(returnTo), lang, ...(signUp ? { signup: '1' } : {}) }).toString()}`;
 }
 
 export const videoUrl = (id: string): string => `/api/jobs/${encodeURIComponent(id)}/video`;

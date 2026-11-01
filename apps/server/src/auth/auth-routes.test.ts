@@ -84,6 +84,7 @@ describe('sign-in with the account service', () => {
       code_challenge_method: 'S256',
       ui_locales: 'en',
     });
+    expect(q.get('prompt')).toBeNull();
     idp.nonce = q.get('nonce') ?? '';
 
     // A callback with another state is refused (back on the page it started from, with the failure noted).
@@ -112,6 +113,25 @@ describe('sign-in with the account service', () => {
 
     expect((await http.post('/auth/logout').set('Origin', 'http://localhost:5293')).status).toBe(204);
     expect((await http.get('/api/me')).body).toEqual({ signedIn: false, signInAvailable: true, voiceAvailable: false, name: null, picture: null, email: null });
+  });
+
+  it('opens the account service on making an account when a sign-up button sent the person', async () => {
+    idp = await startFakeIdp();
+    const base = loadConfig({ NODE_ENV: 'test', AUTH_ISSUER: idp.issuer, AUTH_CLIENT_SECRET: SECRET, PUBLIC_URL: 'http://localhost:5293' });
+    app = await startTestApp({ auth: base.auth });
+    const http = app.http();
+    const authorize = new URL((await http.get('/auth/login?return=%2Ftao%3Ft%3Dla-so%26f%3D1%3A1&lang=en&signup=1')).headers.location ?? '');
+    expect(authorize.searchParams.get('prompt')).toBe('create');
+    expect(authorize.searchParams.get('client_id')).toBe('clip-web');
+    expect(authorize.searchParams.get('ui_locales')).toBe('en');
+    // Back on the create page with the picks in its address, signed in.
+    idp.nonce = authorize.searchParams.get('nonce') ?? '';
+    const callback = await http.get(`/auth/callback?state=${authorize.searchParams.get('state') ?? ''}&code=c1`);
+    expect(callback.headers.location).toBe('/tao?t=la-so&f=1:1');
+    expect((await http.get('/api/me')).body.signedIn).toBe(true);
+    // Only `signup=1` asks for it.
+    const other = new URL((await http.get('/auth/login?return=/tao&signup=yes')).headers.location ?? '');
+    expect(other.searchParams.get('prompt')).toBeNull();
   });
 
   it('refreshes the profile at each sign-in and keeps it when userinfo fails', async () => {

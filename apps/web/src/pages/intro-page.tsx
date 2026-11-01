@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { MAX_DURATION_SECONDS, TEMPLATES, thumbnailPath } from '@clip/templates';
 import { TEMPLATE_BASE } from '../preview/composition-doc';
-import { signInUrl } from '../api';
 import { useAccount } from '../account';
 import { brand } from '../brand';
 import { useI18n } from '../i18n';
@@ -13,8 +12,8 @@ const FEATURES = ['pick', 'type', 'render', 'free'] as const;
 
 /**
  * The page people see before signing in: the marquee hero with the mascot and the sign-in ticket (one call to
- * action), the templates as a wall of posters (each opens the create page, where the preview works signed out), and
- * how it works as the frames of a film strip.
+ * action), a link to try the create page first without an account, the templates as a wall of posters (each opens
+ * the create page, where the preview works signed out), and how it works as the frames of a film strip.
  */
 export function IntroPage(): ReactNode {
   const { t, locale } = useI18n();
@@ -27,10 +26,15 @@ export function IntroPage(): ReactNode {
           <p className="marquee-sign">{brand.appName}</p>
           <h1 className="hero-title">{t('intro.title')}</h1>
           <p className="lead">{t('intro.lead')}</p>
+          <p>
+            <Link to="/tao" data-id="intro-try">
+              {t('intro.try')}
+            </Link>
+          </p>
         </div>
         <div className="hero-aside">
           <img className="hero-mascot" src="/clip-mascot-384.webp" width="192" height="192" alt="" />
-          {canSignIn ? <SignInTicket signInHref={signInUrl('/tao', locale)} title={t('signIn.title')} description={t('signIn.lead')} /> : null}
+          {canSignIn ? <SignInTicket returnTo="/tao" title={t('signIn.title')} description={t('signIn.lead')} /> : null}
         </div>
       </section>
 

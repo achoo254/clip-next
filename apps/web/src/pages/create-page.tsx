@@ -18,7 +18,7 @@ import {
   type VideoFormat,
 } from '@clip/templates';
 import { estimateSpeechSeconds, estimateVoiceTimeline, voiceById, voiceSegments, type Voice } from '@clip/templates/voice';
-import { createJob, signInUrl } from '../api';
+import { createJob } from '../api';
 import { useAccount } from '../account';
 import { errorMessage } from '../error-message';
 import { FormatPicker } from './format-picker';
@@ -289,8 +289,14 @@ export function CreatePage(): ReactNode {
               {busy ? t('create.rendering') : t('create.render')}
             </button>
           ) : me?.signInAvailable === true ? (
-            // Signed out: the sign-in ticket, back to this page (the template and its fields are in the URL).
-            <SignInTicket signInHref={signInUrl(here, locale)} title={t('create.signInToRender')} />
+            // Signed out, where the create button would be: the invite to make a free account, back to this page (the
+            // template, background, shape and voice are in the URL, the text in the session draft; photos cannot come).
+            <SignInTicket
+              returnTo={here}
+              invite="sign-up"
+              title={t('create.signUpToRender')}
+              description={`${t('create.signUpKeeps')}${usable.length > 0 ? ` ${t('create.signUpPhotos')}` : ''}`}
+            />
           ) : null}
         </form>
 

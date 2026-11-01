@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { isTemplateId, templateById } from '@clip/templates';
-import { ApiError, downloadUrl, listJobs, signInUrl, videoUrl, type Job, type JobList } from '../api';
+import { ApiError, downloadUrl, listJobs, videoUrl, type Job, type JobList } from '../api';
 import { useAccount } from '../account';
 import { formatTime } from '../format-time';
 import { useI18n } from '../i18n';
@@ -70,7 +70,7 @@ function JobCard({ job }: { readonly job: Job }): ReactNode {
 }
 
 export function VideosPage(): ReactNode {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const { me } = useAccount();
   const here = useHere();
   const [list, setList] = useState<JobList | null>(null);
@@ -108,7 +108,7 @@ export function VideosPage(): ReactNode {
     return (
       <div className="stack">
         <h1>{t('videos.title')}</h1>
-        <SignInTicket signInHref={signInUrl(here, locale)} title={t('videos.signIn')} />
+        <SignInTicket returnTo={here} title={t('videos.signIn')} />
       </div>
     );
   }

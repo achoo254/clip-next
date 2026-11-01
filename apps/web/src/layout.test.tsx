@@ -56,6 +56,7 @@ describe('sign-in links', () => {
     expect(loginPageHref('/')).toBe('/login');
     expect(loginPageHref('/video')).toBe('/login?return=%2Fvideo');
     expect(signInUrl('//evil.example', 'en')).toBe('/auth/login?return=%2F&lang=en');
+    expect(signInUrl('/tao?t=birthday', 'vi', true)).toBe('/auth/login?return=%2Ftao%3Ft%3Dbirthday&lang=vi&signup=1');
   });
 });
 
@@ -69,6 +70,9 @@ describe('signed-out welcome', () => {
     expect(document.querySelector('[data-id=public-sign-in]')?.getAttribute('href')).toBe('/login');
     expect(document.querySelector('[data-id=sign-in-card]')?.textContent).toContain('App không bao giờ thấy mật khẩu của bạn.');
     expect(document.querySelector('[data-id=intro-start]')).toBeNull();
+    // Newcomers can make an account (the account service opens on "create account"), or try the create page first.
+    expect(screen.getByRole('link', { name: 'Chưa có tài khoản? Đăng ký miễn phí' }).getAttribute('href')).toBe('/auth/login?return=%2Ftao&lang=vi&signup=1');
+    expect(screen.getByRole('link', { name: 'Hoặc làm thử trước, chưa cần tài khoản' }).getAttribute('href')).toBe('/tao');
     expect(document.querySelectorAll('#how [data-id^=feature-]')).toHaveLength(4);
     expect(document.querySelectorAll('[data-id=intro] .template-card').length).toBeGreaterThan(0);
   });
@@ -123,6 +127,7 @@ describe('sign-in page and signed in', () => {
     show('/login?return=%2Fvideo', <LoginPage />);
     expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe('Đăng nhập để tạo video');
     expect(document.querySelector('[data-id=sign-in-cta]')?.getAttribute('href')).toBe('/auth/login?return=%2Fvideo&lang=vi');
+    expect(document.querySelector('[data-id=sign-up-link]')?.getAttribute('href')).toBe('/auth/login?return=%2Fvideo&lang=vi&signup=1');
     expect(document.querySelector('[data-id=public-sign-in]')?.getAttribute('aria-current')).toBe('page');
   });
 

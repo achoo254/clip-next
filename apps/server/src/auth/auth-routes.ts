@@ -1,4 +1,4 @@
-// Sign-in with a hoandat.com account: /auth/login sends the browser to auth.hoandat.com (Code + PKCE, scope
+// Sign-in with a hoandat.com account: /auth/login (`&signup=1` from a sign-up button) sends the browser to auth.hoandat.com (Code + PKCE, scope
 // openid profile email), /auth/callback exchanges the code (client_secret_basic), reads the name, picture and
 // email from the userinfo endpoint, opens a Clip session and comes back to the page the person started from. Off
 // until AUTH_CLIENT_SECRET is set.
@@ -92,6 +92,9 @@ export function authRoutes(config: ServerConfig, db: Db): Router {
   router.get('/auth/login', async (req, res) => {
     const returnTo = safeReturnPath(req.query.return);
     const lang = req.query.lang === 'en' ? 'en' : 'vi';
+    // `signup=1`: the person pressed a sign-up button, so the account service opens on making an account
+    // (`prompt=create`); a plain sign-in never sends it.
+    const signUp = req.query.signup === '1';
     if (!auth || !discover) {
       res.redirect(withLoginResult(returnTo, 'unavailable'));
       return;
@@ -111,6 +114,7 @@ export function authRoutes(config: ServerConfig, db: Db): Router {
         code_challenge: codeChallenge(s.verifier),
         code_challenge_method: 'S256',
         ui_locales: lang,
+        ...(signUp ? { prompt: 'create' } : {}),
       }).toString();
       res.redirect(url.href);
     } catch (error) {

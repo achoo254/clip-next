@@ -42,7 +42,11 @@ CC0.
 
 ## Giới hạn
 
-- Phải đăng nhập mới render; xem trước thì không cần.
+- Phải đăng nhập mới render; xem trước thì không cần. Khách làm được hết trên `/tao` (mẫu, chữ, ảnh, nền, khổ,
+  giọng, xem trước); chỗ nút tạo video là lời mời tạo tài khoản miễn phí. Nút đăng ký đi qua
+  `/auth/login?signup=1`, server thêm `prompt=create` để auth.hoandat.com mở thẳng màn "Tạo tài khoản" (đăng nhập
+  thường không gửi). Quay về vẫn còn mẫu, nền, khổ, giọng (trong địa chỉ) và chữ (bản nháp trong `sessionStorage`);
+  ảnh phải thêm lại.
 - Có giọng đọc: lời đọc ước tính (theo tốc độ đo của giọng đã chọn, cộng 15 %) phải vừa 20 giây, nếu không UI và
   server từ chối (`voice-too-long`); giọng đọc chỉ có khi máy chủ đặt `VOICE_DIR`.
 - Mỗi tài khoản 5 video mỗi ngày theo giờ Việt Nam (job lỗi không tính), một job đang chờ hoặc đang render tại
