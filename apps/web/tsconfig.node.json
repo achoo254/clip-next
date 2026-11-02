@@ -2,6 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
+    // vite-seo.ts renders the guide pages' React component (src/pages/guide-page.tsx) at build time.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
     // Vite loads its config natively: relative imports carry their extension.
     "allowImportingTsExtensions": true
   },

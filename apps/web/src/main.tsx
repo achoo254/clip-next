@@ -15,12 +15,14 @@ import { AccountProvider, useAccount } from './account';
 import { I18nProvider } from './i18n';
 import { Layout } from './layout';
 import { CreatePage } from './pages/create-page';
+import { GuidePage } from './pages/guide-page';
 import { IntroPage } from './pages/intro-page';
 import { LoginPage } from './pages/login-page';
 import { CreditsPage, PrivacyPage, TermsPage } from './pages/legal-pages';
 import { NotFound } from './pages/not-found';
 import { TemplatePage, TemplatesIndexPage } from './pages/template-pages';
 import { VideosPage } from './pages/videos-page';
+import { GUIDE_IDS, GUIDES } from './seo/guide-pages';
 
 /** Signed out: the intro; signed in: straight to making a video. */
 function Home(): ReactNode {
@@ -43,6 +45,9 @@ createRoot(container).render(
               <Route path="/video" element={<VideosPage />} />
               <Route path="/mau" element={<TemplatesIndexPage />} />
               <Route path="/mau/:id" element={<TemplatePage />} />
+              {GUIDE_IDS.map((id) => (
+                <Route key={id} path={GUIDES[id].path} element={<GuidePage guide={GUIDES[id]} />} />
+              ))}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms" element={<TermsPage />} />

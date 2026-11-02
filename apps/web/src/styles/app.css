@@ -1438,6 +1438,58 @@ select.input {
   text-shadow: 0 0 40px var(--c-glow-red);
 }
 
+/* ---------- guide pages (seo/guide-pages.ts) and the intro's ideas ---------- */
+.guide .lead {
+  max-width: 70ch;
+}
+.guide-eyebrow {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-amber);
+}
+.guide-list {
+  display: grid;
+  gap: var(--space-2);
+  padding-left: var(--space-5);
+}
+.guide-faq {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+}
+.guide-faq dt {
+  font-weight: 600;
+  color: var(--c-text);
+}
+.guide-faq dd {
+  margin: var(--space-1) 0 0;
+  color: var(--c-text-muted);
+}
+.guide-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.guide-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--radius-full);
+  color: var(--c-text);
+  text-decoration: none;
+}
+.guide-links a:hover {
+  border-color: var(--c-amber);
+  color: var(--c-amber);
+}
+
 /* Where a link that fills a template in lands: below the header (sticky only from 840px). */
 .template-description {
   scroll-margin-top: calc(var(--header-h) + var(--space-4));

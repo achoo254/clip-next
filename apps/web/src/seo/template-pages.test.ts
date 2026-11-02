@@ -31,8 +31,8 @@ describe('template pages', () => {
   });
 
   it('writes one page per template plus the index, each with its own head and text in #root', () => {
-    const pages = seoPages();
-    expect(pages.map((p) => p.file)).toEqual(['mau/index.html', ...TEMPLATES.map((t) => `mau/${t.id}/index.html`)]);
+    const pages = seoPages(ORIGIN);
+    expect(pages.map((p) => p.file).filter((f) => f.startsWith('mau/'))).toEqual(['mau/index.html', ...TEMPLATES.map((t) => `mau/${t.id}/index.html`)]);
     const page = pages.find((p) => p.file === 'mau/thay-co/index.html');
     if (!page) throw new Error('no page');
     const html = pageHtml(INDEX, ORIGIN, page.head, page.body);
@@ -56,14 +56,14 @@ describe('template pages', () => {
         '</head>',
       ].join('\n'),
     );
-    const page = seoPages().find((p) => p.file === 'mau/tet/index.html');
+    const page = seoPages(ORIGIN).find((p) => p.file === 'mau/tet/index.html');
     if (!page) throw new Error('no page');
     const html = pageHtml(withPreview, ORIGIN, page.head, page.body);
     expect(html.match(/property="og:image"/g)).toHaveLength(1);
     expect(html).toContain(`<meta property="og:image" content="${ORIGIN}/tpl/themes/tet/thumb.webp" />`);
     expect(html).toContain(`<meta name="twitter:image" content="${ORIGIN}/tpl/themes/tet/thumb.webp" />`);
     expect(html).not.toContain('og:image:width');
-    const index = seoPages().find((p) => p.file === 'mau/index.html');
+    const index = seoPages(ORIGIN).find((p) => p.file === 'mau/index.html');
     if (!index) throw new Error('no index');
     expect(pageHtml(withPreview, ORIGIN, index.head, index.body)).toContain(`<meta property="og:image" content="${ORIGIN}/og-image.png" />`);
   });

@@ -1,12 +1,20 @@
 /*
  * clipSeo: what search engines read without running the app. The build writes the public template pages as HTML
- * files (`mau/index.html`, `mau/<template>/index.html`): the app's index.html with the page's title, description,
- * canonical address and preview image, and the page's text already in #root (React replaces it on load). Plus
+ * files (`mau/index.html`, `mau/<template>/index.html`) and the guide pages (`<guide path>/index.html`, see
+ * src/seo/guide-pages.ts): the app's index.html with the page's title, description, canonical address and preview
+ * image, and the page's text already in #root (React replaces it on load). A guide page's text is its React component
+ * rendered here, so crawlers read exactly what the app shows, plus its JSON-LD (WebPage and FAQPage). Plus
  * sitemap.xml and robots.txt. nginx serves `$uri/index.html` before falling back to the app.
  */
-import { TEMPLATES, thumbnailPath, type TemplateSpec } from '@clip/templates';
+import { templateById, TEMPLATES, thumbnailPath, type TemplateSpec } from '@clip/templates';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter } from 'react-router';
 import type { Plugin } from 'vite';
+import { brand } from './src/brand.ts';
 import { DICTIONARIES } from './src/messages.ts';
+import { GuidePage } from './src/pages/guide-page.tsx';
+import { GUIDE_IDS, GUIDES, guideStartPath, type Guide } from './src/seo/guide-pages.ts';
 import {
   createPath,
   relatedTemplates,
@@ -27,6 +35,8 @@ interface PageHead {
   readonly description: string;
   readonly path: string;
   readonly image?: string;
+  /** schema.org data of the page, written as a JSON-LD data block. */
+  readonly jsonLd?: Readonly<Record<string, unknown>>;
 }
 
 /** The pages are written in Vietnamese, the app's default language; the app's own words for the buttons. */
@@ -80,12 +90,53 @@ export function pageHtml(indexHtml: string, origin: string, head: PageHead, body
     html = html.replace(/<meta (property="og:image"|name="twitter:image") content="[^"]*" \/>/g, (_match, attr: string) => `<meta ${attr} content="${image}" />`);
     if (!html.includes('<meta property="og:image" ')) extra.push(`<meta property="og:image" content="${image}" />`);
   }
+  if (head.jsonLd) {
+    // A data block, not a script: the CSP (no inline script) does not apply to it. "<" is escaped inside the JSON so
+    // no text can close the element.
+    extra.push(`<script type="application/ld+json">${JSON.stringify(head.jsonLd).replace(/</g, '\\u003c')}</script>`);
+  }
   html = replaceOnce(html, /<\/head>/, `    ${extra.join('\n    ')}\n  </head>`, '</head>');
   return replaceOnce(html, /<div id="root"><\/div>/, `<div id="root">${body}</div>`, '#root');
 }
 
+/** A guide page's text: its React component, inside the page frame #root gets before the app takes over. */
+function guideBody(guide: Guide): string {
+  const page = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [guide.path] }, createElement(GuidePage, { guide })));
+  return `<main class="page container stack-lg">${page}</main>`;
+}
+
+/** schema.org data of a guide page: the page itself and its questions, for search results. */
+export function guideJsonLd(guide: Guide, origin: string): Readonly<Record<string, unknown>> {
+  const url = `${origin}${guide.path}`;
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebPage',
+        '@id': `${url}#page`,
+        url,
+        name: guide.title,
+        headline: guide.heading,
+        description: guide.description,
+        inLanguage: 'vi',
+        datePublished: guide.datePublished,
+        primaryImageOfPage: `${origin}${thumb(templateById(guide.template))}`,
+        isPartOf: { '@type': 'WebSite', name: brand.appName, url: `${origin}/` },
+        potentialAction: { '@type': 'Action', name: guide.cta, target: `${origin}${guideStartPath(guide)}` },
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': `${url}#faq`,
+        url,
+        inLanguage: 'vi',
+        mainEntity: guide.faq.map((item) => ({ '@type': 'Question', name: item.question, acceptedAnswer: { '@type': 'Answer', text: item.answer } })),
+      },
+    ],
+  };
+}
+
 /** The public pages: path (without the leading slash) of the HTML file → head and body. */
-export function seoPages(): { file: string; head: PageHead; body: string }[] {
+export function seoPages(origin: string): { file: string; head: PageHead; body: string }[] {
   return [
     {
       file: 'mau/index.html',
@@ -97,17 +148,29 @@ export function seoPages(): { file: string; head: PageHead; body: string }[] {
       head: { title: templatePageTitle(spec, 'vi'), description: templatePageDescription(spec, 'vi'), path: templatePagePath(spec), image: thumb(spec) },
       body: templateBody(spec),
     })),
+    ...GUIDE_IDS.map((id) => GUIDES[id]).map((guide) => ({
+      file: `${guide.path.slice(1)}/index.html`,
+      head: {
+        title: guide.title,
+        description: guide.description,
+        path: guide.path,
+        image: thumb(templateById(guide.template)),
+        jsonLd: guideJsonLd(guide, origin),
+      },
+      body: guideBody(guide),
+    })),
   ];
 }
 
 export function sitemapXml(origin: string): string {
-  const paths = ['/', TEMPLATES_PATH, ...TEMPLATES.map(templatePagePath)];
+  const paths = ['/', ...GUIDE_IDS.map((id) => GUIDES[id].path), TEMPLATES_PATH, ...TEMPLATES.map(templatePagePath)];
   const urls = paths.map((p) => `  <url><loc>${origin}${p}</loc></url>`).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
 
+/** "/video" (a person's own videos) only: a bare prefix would also hide guide pages such as /video-chuc-tet-2027. */
 export function robotsTxt(origin: string): string {
-  return `User-agent: *\nDisallow: /api/\nDisallow: /auth/\nDisallow: /video\n\nSitemap: ${origin}/sitemap.xml\n`;
+  return `User-agent: *\nDisallow: /api/\nDisallow: /auth/\nDisallow: /video$\n\nSitemap: ${origin}/sitemap.xml\n`;
 }
 
 export function clipSeo(origin: string): Plugin {
@@ -118,7 +181,7 @@ export function clipSeo(origin: string): Plugin {
     generateBundle(_options, bundle) {
       const index = bundle['index.html'];
       if (index?.type !== 'asset' || typeof index.source !== 'string') throw new Error('clip-seo: no index.html in the bundle');
-      for (const page of seoPages()) this.emitFile({ type: 'asset', fileName: page.file, source: pageHtml(index.source, origin, page.head, page.body) });
+      for (const page of seoPages(origin)) this.emitFile({ type: 'asset', fileName: page.file, source: pageHtml(index.source, origin, page.head, page.body) });
       this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml(origin) });
       this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robotsTxt(origin) });
     },

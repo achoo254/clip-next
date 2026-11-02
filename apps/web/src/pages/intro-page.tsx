@@ -2,13 +2,20 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { MAX_DURATION_SECONDS, TEMPLATES, thumbnailPath } from '@clip/templates';
 import { TEMPLATE_BASE } from '../preview/composition-doc';
+import { GUIDES, type GuideId } from '../seo/guide-pages';
 import { useAccount } from '../account';
 import { brand } from '../brand';
-import { useI18n } from '../i18n';
+import { useI18n, type MessageKey } from '../i18n';
 import { SignInTicket } from '../sign-in-ticket';
 
 const DAILY_LIMIT = 5;
 const FEATURES = ['pick', 'type', 'render', 'free'] as const;
+/** The guide pages (what people search for), each leading to one template. */
+const IDEAS: readonly { readonly id: GuideId; readonly label: MessageKey }[] = [
+  { id: 'birthday', label: 'ideas.birthday' },
+  { id: 'vertical', label: 'ideas.vertical' },
+  { id: 'tet', label: 'ideas.tet' },
+];
 
 /**
  * The page people see before signing in: the marquee hero with the mascot and the sign-in ticket (one call to
@@ -66,6 +73,22 @@ export function IntroPage(): ReactNode {
             </li>
           ))}
         </ol>
+      </section>
+
+      <section className="stack" data-id="ideas" aria-labelledby="intro-ideas">
+        <div>
+          <p className="guide-eyebrow">{t('ideas.eyebrow')}</p>
+          <h2 id="intro-ideas">{t('ideas.title')}</h2>
+        </div>
+        <ul className="guide-links">
+          {IDEAS.map(({ id, label }) => (
+            <li key={id}>
+              <Link to={GUIDES[id].path} data-id={`idea-${id}`}>
+                {t(label)}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
     </div>
   );

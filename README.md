@@ -40,6 +40,14 @@ cục nào phải vẽ lại và không mất chữ hay ảnh.
 Chuyển động viết bằng CSS animation (runtime của hyperframes tua được), chữ dùng font Be Vietnam Pro tự host, nhạc
 CC0.
 
+**Trang gợi ý** cho người tìm trên Google: `/lam-video-sinh-nhat-tu-anh`, `/lam-video-doc-tu-anh`, `/video-chuc-tet-2027`
+(chữ ở `apps/web/src/seo/guide-pages.ts`, chỉ tiếng Việt, chỉ hứa điều mẫu làm được), mỗi trang dẫn vào `/tao?t=<mẫu>`
+(Sinh nhật `chuc-mung`, Kể nhanh `ke-nhanh`, Tết `tet`), các trang dẫn qua lại, trang giới thiệu có mục "Gợi ý" tới cả
+ba. Lúc build, `apps/web/vite-seo.ts` render chính component `GuidePage` ra `dist/<đường dẫn>/index.html` (title,
+description, canonical, `og:*`, JSON-LD `WebPage` + `FAQPage`; khối dữ liệu, không phải script, nên CSP không chặn),
+cùng cách các trang `/mau`, và thêm ba trang vào `sitemap.xml`. `robots.txt` chặn đúng `/video$` (trang video của
+mình), không chặn tiền tố `/video` để trang Tết vẫn được đọc.
+
 ## Giới hạn
 
 - Phải đăng nhập mới render; xem trước thì không cần. Khách làm được hết trên `/tao` (mẫu, chữ, ảnh, nền, khổ,
