@@ -30,5 +30,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      # Photo cleaning decodes with ffprobe and ffmpeg, as the server does.
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
       - run: pnpm test
       - run: pnpm build
