@@ -64,8 +64,14 @@ release() {
 	# One deploy at a time across machines and agent sessions; a lock older than 30 minutes is a crashed run.
 	local lock=/run/lock/clip-deploy owner
 	owner="$(hostname -s) $(git rev-parse --short HEAD) $(date -u +%FT%TZ)"
-	if ! remote "find $lock -maxdepth 0 -mmin +30 -exec rm -rf {} + 2>/dev/null; mkdir $lock 2>/dev/null && echo '$owner' >$lock/owner"; then
+	# Exit 3 from the server means the lock is held; anything else is ssh failing.
+	rc=0
+	remote "find $lock -maxdepth 0 -mmin +30 -exec rm -rf {} + 2>/dev/null; mkdir $lock 2>/dev/null || exit 3; echo '$owner' >$lock/owner" || rc=$?
+	if [ "$rc" -eq 3 ]; then
 		echo "another deploy is running: $(remote "cat $lock/owner" 2>/dev/null)" >&2
+		exit 1
+	elif [ "$rc" -ne 0 ]; then
+		echo "could not take the deploy lock on the server (ssh exit $rc)" >&2
 		exit 1
 	fi
 	# Expanded now on purpose: $lock is local to release().
