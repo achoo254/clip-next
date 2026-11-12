@@ -68,7 +68,9 @@ Mac M4 ngày 26/10/2026: mẫu 18 giây "Chuyến đi" mất 36 giây theo đư�
 
 ## Phát hành
 
-`infra/deploy.sh release`: chạy `lint`, `typecheck`, `test`, `build` ở máy dev, gửi bản build (giữ bố cục
+`infra/deploy.sh release` từ chối chạy khi worktree còn thay đổi chưa commit, `HEAD` chưa nằm trên `origin/main`,
+hoặc đang có lần deploy khác giữ khoá `/run/lock/clip-deploy` trên server (khoá cũ hơn 30 phút coi như lần chạy đã
+chết và bị gỡ). Qua được thì script chạy `lint`, `typecheck`, `test`, `build` ở máy dev, gửi bản build (giữ bố cục
 workspace vì bundle tìm migration và mẫu qua package, worker chạy CLI `hyperframes` từ `node_modules`), trên máy
 chủ `pnpm install --prod` cho `@clip/server` và `@clip/worker`, đổi `app/`, cài unit/nginx đã đổi, restart
 `clip-server` và đợi `/healthz`. Nếu `/healthz` không lên trong 20 giây, script tự đổi về `app.prev`, restart

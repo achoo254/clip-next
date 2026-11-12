@@ -50,6 +50,28 @@ setup() {
 }
 
 release() {
+	echo "== guards"
+	# The release must be exactly a commit that is already on origin/main.
+	if [ -n "$(git status --porcelain)" ]; then
+		echo "working tree is not clean: commit or stash first (git status)" >&2
+		exit 1
+	fi
+	git fetch --quiet origin main
+	if ! git merge-base --is-ancestor HEAD origin/main; then
+		echo "HEAD $(git rev-parse --short HEAD) is not on origin/main: push it first" >&2
+		exit 1
+	fi
+	# One deploy at a time across machines and agent sessions; a lock older than 30 minutes is a crashed run.
+	local lock=/run/lock/clip-deploy owner
+	owner="$(hostname -s) $(git rev-parse --short HEAD) $(date -u +%FT%TZ)"
+	if ! remote "find $lock -maxdepth 0 -mmin +30 -exec rm -rf {} + 2>/dev/null; mkdir $lock 2>/dev/null && echo '$owner' >$lock/owner"; then
+		echo "another deploy is running: $(remote "cat $lock/owner" 2>/dev/null)" >&2
+		exit 1
+	fi
+	# Expanded now on purpose: $lock is local to release().
+	# shellcheck disable=SC2064
+	trap "remote 'rm -rf $lock' || true" EXIT
+
 	echo "== gates and build"
 	$PNPM install --frozen-lockfile
 	$PNPM lint
