@@ -64,18 +64,29 @@ Mac M4 ngày 26/10/2026: mẫu 18 giây "Chuyến đi" mất 36 giây theo đư�
 6. **Chrome:** `google-chrome` đã có trên `.65` (bản đo ngày 26/10/2026). Kiểm: `sudo -u clip /usr/bin/google-chrome --headless=new --dump-dom about:blank`.
    ffmpeg của máy không có libx264: worker tự dùng `libopenh264` (đã đo được).
 7. **Giọng đọc:** `bash infra/deploy.sh voice` (xem mục Giọng đọc), rồi thêm `VOICE_DIR` vào env.
-8. **Phát hành:** `bash infra/deploy.sh release`.
+8. **User deploy cho CI:** chép `infra/setup-deploy-user.sh` và `infra/activate-incoming.sh` lên server rồi chạy
+   `bash infra/setup-deploy-user.sh < clip-deploy.pub` bằng root (user `clip-deploy`, `ci-incoming/`, sudoers một lệnh).
+   Đặt secret `DEPLOY_HOST`, `DEPLOY_PORT`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS` và environment `production` trên GitHub.
+9. **Phát hành:** push `main` (xem dưới).
 
 ## Phát hành
 
-`infra/deploy.sh release` từ chối chạy khi worktree còn thay đổi chưa commit, `HEAD` chưa nằm trên `origin/main`,
-hoặc đang có lần deploy khác giữ khoá `/run/lock/clip-deploy` trên server (khoá cũ hơn 30 phút coi như lần chạy đã
-chết và bị gỡ). Qua được thì script chạy `lint`, `typecheck`, `test`, `build` ở máy dev, gửi bản build (giữ bố cục
-workspace vì bundle tìm migration và mẫu qua package, worker chạy CLI `hyperframes` từ `node_modules`), trên máy
-chủ `pnpm install --prod` cho `@clip/server` và `@clip/worker`, đổi `app/`, cài unit/nginx đã đổi, restart
-`clip-server` và đợi `/healthz`. Nếu `/healthz` không lên trong 20 giây, script tự đổi về `app.prev`, restart
-`clip-server` rồi thoát mã khác 0 (bản lỗi để lại ở `app.failed`; worker chưa bị restart nên vẫn chạy bản cũ).
-Khi server đã khoẻ mới restart `clip-worker`.
+**Bình thường: push `main`.** CI (`.github/workflows/ci.yml`: lint, typecheck, test, build) xanh thì
+`.github/workflows/deploy.yml` build, đóng gói (`infra/pack-release.sh`: giữ bố cục workspace vì bundle tìm migration và
+mẫu qua package, worker chạy CLI `hyperframes` từ `node_modules`; không gửi `node_modules`), upload bằng user
+`clip-deploy` vào `/var/www/clip/ci-incoming/<id>` rồi chạy `sudo /usr/local/sbin/clip-activate-incoming <id>`, cuối
+cùng kiểm từ ngoài: trang chủ 200, `/healthz`, `/RELEASE` trả đúng mã release. Theo dõi bằng `gh run watch`. Quy tắc
+chung: `docs/deploy-standard.md` của workspace `hoandat-app`.
+
+`infra/activate-incoming.sh` (root, `flock` trên `/run/clip-activate.lock` nên hai lần activate không chồng nhau): kiểm
+bản upload (không link, đủ bundle), `pnpm install --prod` cho `@clip/server` và `@clip/worker`, đổi `app/` (giữ
+`app.prev`), cài unit/nginx đã đổi (`nginx -t` trước), restart `clip-server` và đợi `/healthz`. Nếu `/healthz` không lên
+trong 20 giây, script tự đổi về `app.prev`, restart `clip-server` rồi thoát mã khác 0 (bản lỗi để lại ở `app.failed`;
+worker chưa bị restart nên vẫn chạy bản cũ). Khi server đã khoẻ mới restart `clip-worker`.
+
+**Dự phòng khi CI hỏng:** `SSH_TARGET=<root>@<SERVER_65_IP> SSH_OPTS=... bash infra/deploy.sh release`. Script từ chối
+worktree chưa sạch và commit chưa lên `origin/main`, chạy gate và build ở máy dev, đóng gói, upload, cài lại
+`activate-incoming.sh` vào `/usr/local/sbin` rồi chạy đúng bước activate như CI.
 
 **Dừng worker giữa chừng** (release, restart): `KillMode=mixed` gửi SIGTERM cho riêng tiến trình worker. Worker
 huỷ lần render đang chạy (công cụ nhận SIGTERM, 10 giây sau là SIGKILL), **đưa job về hàng đợi** kèm ảnh, rồi thoát;

@@ -9,10 +9,10 @@
 #          its media directories, the systemd units and the cleanup timer, /etc/clip. It writes no secret: the env
 #          file /etc/clip/production.env comes from the iCloud env folder "ENV production/clip-next/" (see
 #          docs/deployment-guide.md). The database and the nginx site are separate steps of that guide.
-# release  gates and build here, upload, `pnpm install --prod` for the server and worker on the server, switch
-#          app/ (the previous one kept as app.prev), install changed units and the nginx site (nginx -t first),
-#          restart clip-server and check /healthz (on failure switch back to app.prev, restart, exit 1), then
-#          restart clip-worker.
+# release  break-glass only: a push to main deploys through .github/workflows/deploy.yml. Refuses a dirty tree or a
+#          commit not on origin/main, runs the gates and the build here, packs (infra/pack-release.sh), uploads to
+#          ci-incoming/<id> and runs the same activation as CI (infra/activate-incoming.sh: pnpm install --prod,
+#          switch app/, keep app.prev, units, nginx, /healthz, rollback, worker restart).
 # voice    idempotent: the spoken voice (VieNeu-TTS v3 Nano, CPU) under /var/www/clip/tts, owned by `clip`: a pinned
 #          uv, its own CPython 3.12 (python/), the Python environment of apps/worker/tts/requirements.txt (pyenv/) and
 #          the model at a pinned revision, checked against apps/worker/tts/vieneu-v3-nano.sha256 (models/). Touches
@@ -26,7 +26,6 @@ set -euo pipefail
 : "${SSH_TARGET:?set SSH_TARGET to the ssh target of the server}"
 read -r -a ssh_opts <<<"${SSH_OPTS:-}"
 REMOTE=/var/www/clip
-PORT=4840
 PNPM="npx --yes pnpm@11.9.0"
 export COPYFILE_DISABLE=1
 
@@ -61,22 +60,6 @@ release() {
 		echo "HEAD $(git rev-parse --short HEAD) is not on origin/main: push it first" >&2
 		exit 1
 	fi
-	# One deploy at a time across machines and agent sessions; a lock older than 30 minutes is a crashed run.
-	local lock=/run/lock/clip-deploy owner
-	owner="$(hostname -s) $(git rev-parse --short HEAD) $(date -u +%FT%TZ)"
-	# Exit 3 from the server means the lock is held; anything else is ssh failing.
-	rc=0
-	remote "find $lock -maxdepth 0 -mmin +30 -exec rm -rf {} + 2>/dev/null; mkdir $lock 2>/dev/null || exit 3; echo '$owner' >$lock/owner" || rc=$?
-	if [ "$rc" -eq 3 ]; then
-		echo "another deploy is running: $(remote "cat $lock/owner" 2>/dev/null)" >&2
-		exit 1
-	elif [ "$rc" -ne 0 ]; then
-		echo "could not take the deploy lock on the server (ssh exit $rc)" >&2
-		exit 1
-	fi
-	# Expanded now on purpose: $lock is local to release().
-	# shellcheck disable=SC2064
-	trap "remote 'rm -rf $lock' || true" EXIT
 
 	echo "== gates and build"
 	$PNPM install --frozen-lockfile
@@ -85,70 +68,21 @@ release() {
 	$PNPM test
 	$PNPM build
 
-	echo "== upload"
-	# The release keeps the workspace layout: the bundles find the migrations and the templates through their
-	# packages, and the worker runs the hyperframes CLI from node_modules.
-	tar -czf - package.json pnpm-lock.yaml pnpm-workspace.yaml infra packages \
-		apps/server/package.json apps/server/dist apps/worker/package.json apps/worker/dist apps/worker/tts \
-		apps/web/package.json apps/web/dist |
-		remote "set -euo pipefail; rm -rf $REMOTE/incoming; mkdir -p $REMOTE/incoming; tar xzf - --no-same-owner -C $REMOTE/incoming"
+	local id work
+	id="$(date -u +%Y%m%d-%H%M%S)-$(git rev-parse --short=12 HEAD)"
+	work="$(mktemp -d)"
+	# Expanded now on purpose: $work is local to release().
+	# shellcheck disable=SC2064
+	trap "rm -rf '$work'" EXIT
+	bash infra/pack-release.sh "$work/release"
 
-	echo "== install, switch, restart"
-	remote "set -euo pipefail
-		[ -s /etc/clip/production.env ] || { echo 'no /etc/clip/production.env: run setup and write it first' >&2; exit 1; }
-		export PATH=/opt/node22/bin:\$PATH
-		cd $REMOTE/incoming
-		$PNPM install --prod --frozen-lockfile --filter '@clip/server...' --filter '@clip/worker...' --reporter=silent
-		chown -R root:clip $REMOTE/incoming && chmod -R g+rX,o-rwx $REMOTE/incoming
-		cd $REMOTE
-		rm -rf app.prev
-		[ -d app ] && mv app app.prev
-		mv incoming app
+	echo "== upload $id"
+	tar -czf - -C "$work/release" . |
+		remote "set -euo pipefail; mkdir -p $REMOTE/ci-incoming/$id; tar xzf - --no-same-owner -C $REMOTE/ci-incoming/$id
+			install -m 755 -o root -g root $REMOTE/ci-incoming/$id/infra/activate-incoming.sh /usr/local/sbin/clip-activate-incoming"
 
-		changed=0
-		for unit in app/infra/systemd/*; do
-			name=\$(basename \$unit)
-			cmp -s \$unit /etc/systemd/system/\$name || { install -m 644 \$unit /etc/systemd/system/\$name; changed=1; }
-		done
-		[ \$changed = 1 ] && systemctl daemon-reload
-
-		conf=/etc/nginx/conf.d/clip.hoandat.com.conf
-		if ! cmp -s app/infra/nginx/clip.hoandat.com.conf \$conf; then
-			[ -f \$conf ] && cp \$conf \$conf.prev
-			cp app/infra/nginx/clip.hoandat.com.conf \$conf
-			if ! nginx -t; then
-				if [ -f \$conf.prev ]; then mv \$conf.prev \$conf; else rm -f \$conf; fi
-				echo 'nginx -t failed: config restored, nothing reloaded' >&2
-				exit 1
-			fi
-			systemctl reload nginx
-			echo 'nginx config installed and reloaded'
-		fi
-
-		healthy() {
-			for i in \$(seq 1 20); do
-				curl -fsS http://127.0.0.1:$PORT/healthz >/dev/null && return 0
-				sleep 1
-			done
-			return 1
-		}
-		systemctl enable clip-server clip-worker >/dev/null
-		systemctl restart clip-server
-		if ! healthy; then
-			journalctl -u clip-server -n 40 --no-pager
-			if [ -d app.prev ]; then
-				echo 'healthz failed: switching back to the previous release' >&2
-				rm -rf app.failed && mv app app.failed && mv app.prev app
-				systemctl restart clip-server
-				healthy && echo 'previous release is back and healthy' >&2 || echo 'previous release is not healthy either' >&2
-			fi
-			# The worker was not restarted: it still runs the previous code.
-			exit 1
-		fi
-		echo healthz ok
-		# The worker puts the job in hand back in the queue and restarts (KillMode=mixed, TimeoutStopSec).
-		systemctl restart clip-worker
-		systemctl is-active clip-worker"
+	echo "== activate (the same step CI runs; it waits for any other activation)"
+	remote "/usr/local/sbin/clip-activate-incoming $id" </dev/null
 }
 
 # The voice's pinned tools: uv (its release archive's sha256) and the model's revision on Hugging Face.
