@@ -66,6 +66,10 @@ mình), không chặn tiền tố `/video` để trang Tết vẫn được đ�
   `server-busy`; mỗi tài khoản 10 yêu cầu render mỗi 10 phút; ảnh tối đa 24 MP, mỗi lần giải mã 2 ảnh.
 - Job (cả chữ), video và ảnh bị xoá đúng 7 ngày sau khi tạo (timer systemd mỗi giờ); phiên hết hạn cũng bị xoá.
   Job đang render quá 10 phút bị đánh `failed`; dừng worker thì job đang render được đưa về hàng đợi.
+- Xoá tài khoản chỉ ở `auth.hoandat.com/account` (auth-next ADR 0018): IdP gửi SET ký ES256 tới
+  `POST /api/idp/account-deleted`, server kiểm chữ ký (JWKS của IdP), `typ`, `iss`, `aud`, hạn, event rồi xoá ngay
+  tài khoản, phiên, mọi job (cả chữ) cùng video và ảnh của chúng. Clip không có gì dùng chung giữa các tài khoản nên
+  không có gì chuyển chủ. Clip không có nút hay API xoá tài khoản riêng.
 
 ## Chạy ở máy dev
 

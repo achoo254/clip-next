@@ -2,6 +2,7 @@ import type { Db, MediaLayout } from '@clip/db';
 import express, { type ErrorRequestHandler, type Express } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
+import { accountDeletedRoute } from './auth/account-deleted';
 import { authRoutes } from './auth/auth-routes';
 import { requireAllowedOrigin } from './auth/origin-check';
 import type { ServerConfig } from './config';
@@ -29,6 +30,8 @@ export function createApp({ config, db, media, jobs }: AppDeps): Express {
   // Sign-in round trips per IP: generous, because mobile carriers and offices put many people behind one address.
   const signInLimit = rateLimit({ windowMs: 15 * 60_000, limit: 100, standardHeaders: 'draft-8', legacyHeaders: false });
   app.use(['/auth/login', '/auth/callback'], signInLimit);
+  // The IdP's account-deletion notice comes server to server, without an Origin: ahead of the same-origin check.
+  app.use(accountDeletedRoute(config, db, media));
   app.use(requireAllowedOrigin(config.allowedOrigins));
   app.use(authRoutes(config, db));
   app.use(jobRoutes(config, db, media, jobs));

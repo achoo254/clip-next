@@ -51,6 +51,8 @@ Mac M4 ngày 26/10/2026: mẫu 18 giây "Chuyến đi" mất 36 giây theo đư�
 
 1. **IdP:** auth-next bật client `clip-web` bằng `CLIP_WEB_URL=https://clip.hoandat.com` và
    `CLIP_WEB_CLIENT_SECRET` (phase 1 của plan); redirect `https://clip.hoandat.com/auth/callback`.
+   Thêm `https://clip.hoandat.com/api/idp/account-deleted` vào `ACCOUNT_DELETED_URLS` của auth-next để tài khoản xoá
+   ở IdP thì dữ liệu ở Clip bị xoá theo (ADR 0018; nginx đã chuyển `/api/` vào server, không cần route riêng).
 2. **DNS:** bản ghi `clip.hoandat.com` trên Cloudflare (proxied, SSL "full") trỏ về `.65`.
 3. **Database** (trên `.65`, chạy từ `/tmp` để `sudo -u postgres` không kêu quyền thư mục):
    ```bash

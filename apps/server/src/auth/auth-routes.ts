@@ -12,12 +12,14 @@ import { EMPTY_PROFILE, fetchProfile, type AccountProfile } from './userinfo';
 
 const STATE_COOKIE = 'clip_login';
 
-interface Discovery {
+export interface Discovery {
   readonly issuer: string;
   readonly authorization_endpoint: string;
   readonly token_endpoint: string;
   /** Missing at an IdP without userinfo: sign-in still works, with no name or picture. */
   readonly userinfo_endpoint?: string;
+  /** The IdP's signing keys, read only to check its account-deletion notices (auth/account-deleted.ts). */
+  readonly jwks_uri?: string;
 }
 
 function isDiscovery(value: unknown): value is Discovery {
@@ -27,12 +29,13 @@ function isDiscovery(value: unknown): value is Discovery {
     typeof v.issuer === 'string' &&
     typeof v.authorization_endpoint === 'string' &&
     typeof v.token_endpoint === 'string' &&
-    (v.userinfo_endpoint === undefined || typeof v.userinfo_endpoint === 'string')
+    (v.userinfo_endpoint === undefined || typeof v.userinfo_endpoint === 'string') &&
+    (v.jwks_uri === undefined || typeof v.jwks_uri === 'string')
   );
 }
 
 /** The IdP's endpoints, cached for an hour. */
-function discoveryCache(issuer: string): () => Promise<Discovery> {
+export function discoveryCache(issuer: string): () => Promise<Discovery> {
   let cached: { at: number; doc: Discovery } | null = null;
   return async () => {
     if (cached && Date.now() - cached.at < 3_600_000) return cached.doc;

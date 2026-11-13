@@ -6,3 +6,6 @@ export const brand = defineBrand(config);
 
 /** The ecosystem's home page, linked from the footer. */
 export const HOME_URL = `https://${brand.primaryTenant.domain}`;
+
+/** Where an account is deleted: only at the account service, which then tells every app to delete its data. */
+export const ACCOUNT_DELETE_URL = `https://auth.${brand.primaryTenant.domain}/account#account-delete`;

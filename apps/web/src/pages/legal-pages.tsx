@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { brand, HOME_URL } from '../brand';
+import { ACCOUNT_DELETE_URL, brand, HOME_URL } from '../brand';
 import { useI18n } from '../i18n';
 
 function Page({ title, children }: { readonly title: string; readonly children: ReactNode }): ReactNode {
@@ -49,6 +49,11 @@ export function PrivacyPage(): ReactNode {
           </p>
           <h2>Video</h2>
           <p>Video chỉ bạn tải được (máy chủ kiểm tài khoản trước khi trả tệp) và tự xoá sau 7 ngày, tính từ lúc bạn bấm tạo.</p>
+          <h2>Xoá tài khoản</h2>
+          <p>
+            Tài khoản chỉ xoá được ở <a href={ACCOUNT_DELETE_URL}>trang tài khoản {account}</a>. Khi bạn xoá ở đó, {name} xoá ngay mọi thứ
+            đã lưu về bạn: tài khoản (tên, ảnh, email), phiên đăng nhập, chữ, ảnh và video.
+          </p>
           <h2>Không có</h2>
           <p>Không quảng cáo, không công cụ theo dõi, không bán hay chia sẻ dữ liệu cho bên thứ ba.</p>
         </>
@@ -85,6 +90,11 @@ export function PrivacyPage(): ReactNode {
           </p>
           <h2>Videos</h2>
           <p>Only you can download your videos (the server checks your account first); they are deleted 7 days after you press create.</p>
+          <h2>Deleting your account</h2>
+          <p>
+            An account is deleted only on the <a href={ACCOUNT_DELETE_URL}>{account} account page</a>. When you delete it there, {name}
+            deletes everything it stored about you at once: the account (name, picture, email), sessions, text, photos and videos.
+          </p>
           <h2>None of this</h2>
           <p>No ads, no trackers, no selling or sharing of data with third parties.</p>
         </>
