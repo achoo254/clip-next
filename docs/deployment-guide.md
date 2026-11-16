@@ -18,6 +18,12 @@ không ghi IP, cổng SSH hay user máy chủ vào đây; dùng placeholder `<SE
 | Env | `/etc/clip/production.env` (640 `root:clip`), nguồn ở thư mục env iCloud `ENV production/clip-next/` |
 | nginx | `/etc/nginx/conf.d/clip.hoandat.com.conf` (từ `infra/nginx/`), `deploy.sh release` cài khi đổi, `nginx -t` trước khi reload |
 
+**Kết nối ra ngoài ưu tiên IPv4.** IPv6 đi ra từ .65 không chạy và kết nối IPv4 đôi khi mất hơn 2 giây, nên với mặc
+định của Node 22 (happy eyeballs, 250 ms mỗi địa chỉ) lời gọi qua Cloudflare hay bên thứ ba hỏng với
+`AggregateError [ETIMEDOUT]`. Process chạy với `NODE_OPTIONS=--dns-result-order=ipv4first
+--network-family-autoselection-attempt-timeout=2500` (`Environment=` trong `infra/systemd/clip-server.service` và `clip-worker.service`): thử IPv4 trước, đợi mỗi địa chỉ 2,5 giây. Bước activate của mỗi release cài lại unit đã đổi.
+Kiểm: `tr '\0' '\n' < /proc/<pid>/environ | grep NODE_OPTIONS`.
+
 ## Env (`/etc/clip/production.env`)
 
 Server và worker đọc chung một file; `loadConfig` của server dừng ngay khi thiếu biến bắt buộc ở production.

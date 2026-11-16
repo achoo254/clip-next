@@ -11,6 +11,9 @@ Group=clip
 # DATABASE_URL, MEDIA_DIR, CHROME_PATH (the shared env file). The worker hands hyperframes, Chrome and ffmpeg a
 # minimal environment of their own (apps/worker/src/render.ts), never this file's secrets.
 EnvironmentFile=/etc/clip/production.env
+# IPv6 egress on .65 is broken and IPv4 connects can take over 2 s, so Node's default happy eyeballs (250 ms per
+# address) times out on outbound calls: try IPv4 first and give each address 2.5 s.
+Environment="NODE_OPTIONS=--dns-result-order=ipv4first --network-family-autoselection-attempt-timeout=2500"
 WorkingDirectory=/var/www/clip/app
 ExecStart=/opt/node22/bin/node --enable-source-maps apps/worker/dist/main.mjs
 # A render that times out makes the worker exit 1: the restart clears whatever the render left in the cgroup.
