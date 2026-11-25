@@ -79,7 +79,7 @@ Mac M4 ngày 26/10/2026: mẫu 18 giây "Chuyến đi" mất 36 giây theo đư�
 
 ## Phát hành
 
-**Deploy khi gọi (từ 25/11/2026):** push lên `main` chỉ chạy `ci`. Xong một việc thì chạy `tools/deploy-prod.sh` của workspace `hoandat-app` (hoặc `gh workflow run deploy.yml`); mỗi tối 22:45 workflow tự chạy nếu `main` đi trước lần deploy thành công gần nhất. Workflow lấy đầu `main`, chờ `ci` của commit đó xanh rồi
+**Deploy khi gọi (từ 25/11/2026):** push lên `main` chỉ chạy `ci`. Xong một việc thì chạy `tools/deploy-prod.sh` của workspace `hoandat-app` (hoặc `gh workflow run deploy.yml`); mỗi tối 22:45 workflow tự chạy nếu `main` đi trước lần deploy thành công gần nhất. Workflow lấy đầu `main` (không chờ `ci`) rồi
 `.github/workflows/deploy.yml` build, đóng gói (`infra/pack-release.sh`: giữ bố cục workspace vì bundle tìm migration và
 mẫu qua package, worker chạy CLI `hyperframes` từ `node_modules`; không gửi `node_modules`), upload bằng user
 `clip-deploy` vào `/var/www/clip/ci-incoming/<id>` rồi chạy `sudo /usr/local/sbin/clip-activate-incoming <id>`, cuối
