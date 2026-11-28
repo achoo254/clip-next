@@ -1,16 +1,17 @@
 import { readPreferences, subscribePreferences } from '@achoo254/app-shell/preferences';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { Locale } from '@clip/templates';
+import { LOCALES, type Locale } from '@clip/templates';
 import { brand } from './brand';
 import { DICTIONARIES, type MessageKey } from './messages';
 
 export type { MessageKey };
-export const LOCALES = ['vi', 'en'] as const satisfies readonly Locale[];
+/** The languages of the shared shell (`@achoo254/app-shell`): Vietnamese, English and Simplified Chinese. */
+export { LOCALES };
 
 /** Where the language was kept before the choice shared by every hoandat.com app (cookie `hd_lang`). */
 export const LEGACY_LANG_KEY = 'clip.locale';
 
-export const isLocale = (value: unknown): value is Locale => value === 'vi' || value === 'en';
+export const isLocale = (value: unknown): value is Locale => LOCALES.some((locale) => locale === value);
 
 export type Translate = (key: MessageKey, params?: Readonly<Record<string, string | number>>) => string;
 
@@ -25,7 +26,7 @@ export function translator(locale: Locale): Translate {
 
 /** The language picked in any hoandat.com app (or here before the shared choice), if any. */
 function storedLocale(): Locale | undefined {
-  return readPreferences({ domain: brand.primaryTenant.domain, legacyLangKey: LEGACY_LANG_KEY }).lang;
+  return readPreferences({ domain: brand.primaryTenant.domain, legacyLangKey: LEGACY_LANG_KEY, locales: LOCALES }).lang;
 }
 
 /** `?lang=` first (links from other apps), then the saved choice, then Vietnamese. */

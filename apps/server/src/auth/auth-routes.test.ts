@@ -115,6 +115,18 @@ describe('sign-in with the account service', () => {
     expect((await http.get('/api/me')).body).toEqual({ signedIn: false, signInAvailable: true, voiceAvailable: false, name: null, picture: null, email: null });
   });
 
+  it('asks the account service for the page language, Simplified Chinese included, and Vietnamese otherwise', async () => {
+    idp = await startFakeIdp();
+    const base = loadConfig({ NODE_ENV: 'test', AUTH_ISSUER: idp.issuer, AUTH_CLIENT_SECRET: SECRET, PUBLIC_URL: 'http://localhost:5293' });
+    app = await startTestApp({ auth: base.auth });
+    const http = app.http();
+    const uiLocales = async (lang: string): Promise<string | null> =>
+      new URL((await http.get(`/auth/login?return=%2F&lang=${lang}`)).headers.location ?? '').searchParams.get('ui_locales');
+    expect(await uiLocales('zh-CN')).toBe('zh-CN');
+    expect(await uiLocales('en')).toBe('en');
+    expect(await uiLocales('fr')).toBe('vi');
+  });
+
   it('opens the account service on making an account when a sign-up button sent the person', async () => {
     idp = await startFakeIdp();
     const base = loadConfig({ NODE_ENV: 'test', AUTH_ISSUER: idp.issuer, AUTH_CLIENT_SECRET: SECRET, PUBLIC_URL: 'http://localhost:5293' });

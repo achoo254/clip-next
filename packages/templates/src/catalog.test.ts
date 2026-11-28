@@ -20,11 +20,14 @@ import {
   linkParams,
   LAYOUT_IDS,
   LAYOUTS,
+  LOCALES,
   MAX_DURATION_SECONDS,
   normalizeText,
+  OCCASION_NAMES,
   OCCASIONS,
   parseBackground,
   parseFormat,
+  sampleIn,
   STAR_CHOICES,
   TEMPLATE_IDS,
   TEMPLATES,
@@ -159,10 +162,10 @@ describe('the birth chart template (la-so)', () => {
 });
 
 describe('templates', () => {
-  it('last at most 20 seconds, have unique ids and a name in both languages', () => {
+  it('last at most 20 seconds, have unique ids and a name and description in every language', () => {
     for (const spec of TEMPLATES) {
       expect(spec.durationSeconds).toBeLessThanOrEqual(MAX_DURATION_SECONDS);
-      expect(spec.name.vi && spec.name.en).toBeTruthy();
+      for (const locale of LOCALES) expect(spec.name[locale] && spec.description[locale], `${spec.id} ${locale}`).toBeTruthy();
     }
     expect(new Set(TEMPLATES.map((t) => t.id)).size).toBe(TEMPLATES.length);
     expect(TEMPLATES.map((t) => t.id)).toEqual([...TEMPLATE_IDS]);
@@ -174,6 +177,23 @@ describe('templates', () => {
         for (const text of [field.placeholder.vi, field.placeholder.en]) expect([...text].length, `${spec.id}.${field.id}`).toBeLessThanOrEqual(field.maxLength);
       }
     }
+  });
+
+  it('label every field, choice and occasion in every language', () => {
+    for (const spec of TEMPLATES) {
+      for (const field of spec.fields) {
+        for (const locale of LOCALES) expect(field.label[locale], `${spec.id}.${field.id} ${locale}`).toBeTruthy();
+        for (const c of field.choices ?? []) for (const locale of LOCALES) expect(c.label[locale], `${c.id} ${locale}`).toBeTruthy();
+      }
+    }
+    for (const occasion of OCCASIONS) for (const locale of LOCALES) expect(OCCASION_NAMES[occasion][locale]).toBeTruthy();
+  });
+
+  it('show the English samples on a Chinese page: the video fonts and voices have no Chinese', () => {
+    const sample = { vi: 'Chúc mừng sinh nhật!', en: 'Happy birthday!' };
+    expect(sampleIn(sample, 'vi')).toBe('Chúc mừng sinh nhật!');
+    expect(sampleIn(sample, 'en')).toBe('Happy birthday!');
+    expect(sampleIn(sample, 'zh-CN')).toBe('Happy birthday!');
   });
 
   it('leave no occasion filter empty', () => {

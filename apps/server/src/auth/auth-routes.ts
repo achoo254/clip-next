@@ -6,7 +6,7 @@ import type { Db } from '@clip/db';
 import express, { type RequestHandler, type Router } from 'express';
 import type { AuthConfig, ServerConfig } from '../config';
 import { HttpError } from '../http-error';
-import { codeChallenge, newLoginState, openState, safeReturnPath, sealState, subFromIdToken, withLoginResult } from './oidc-login';
+import { codeChallenge, isLoginLang, newLoginState, openState, safeReturnPath, sealState, subFromIdToken, withLoginResult } from './oidc-login';
 import { accountForSub, accountProfile, clearSessionCookie, createSession, deleteSession, readCookie, readSessionToken, sessionAccount, setSessionCookie } from './session';
 import { EMPTY_PROFILE, fetchProfile, type AccountProfile } from './userinfo';
 
@@ -94,7 +94,7 @@ export function authRoutes(config: ServerConfig, db: Db): Router {
 
   router.get('/auth/login', async (req, res) => {
     const returnTo = safeReturnPath(req.query.return);
-    const lang = req.query.lang === 'en' ? 'en' : 'vi';
+    const lang = isLoginLang(req.query.lang) ? req.query.lang : 'vi';
     // `signup=1`: the person pressed a sign-up button, so the account service opens on making an account
     // (`prompt=create`); a plain sign-in never sends it.
     const signUp = req.query.signup === '1';

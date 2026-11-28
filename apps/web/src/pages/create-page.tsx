@@ -8,6 +8,7 @@ import {
   isAllowedChoice,
   isTemplateId,
   normalizeText,
+  sampleIn,
   templateById,
   validateInput,
   type LayoutId,
@@ -55,7 +56,7 @@ function loadDrafts(): Drafts {
 
 /** The template's placeholders, so the preview shows a full video before anything is typed. */
 function sampleFields(id: TemplateId, locale: Locale): Record<string, string> {
-  return Object.fromEntries(templateById(id).fields.map((f) => [f.id, f.required ? f.placeholder[locale] : '']));
+  return Object.fromEntries(templateById(id).fields.map((f) => [f.id, f.required ? sampleIn(f.placeholder, locale) : '']));
 }
 
 /** Whether the address carries values for the template's fields (a link that fills it in). */
@@ -69,7 +70,7 @@ function linkFills(spec: TemplateSpec, params: URLSearchParams): boolean {
  */
 function choiceValue(field: TextField, stored: string | undefined, locale: Locale): string {
   if (stored !== undefined && (stored === '' ? !field.required : isAllowedChoice(field, stored))) return stored;
-  return field.placeholder[locale];
+  return sampleIn(field.placeholder, locale);
 }
 
 export function CreatePage(): ReactNode {
@@ -228,7 +229,7 @@ export function CreatePage(): ReactNode {
                   className="input"
                   value={value}
                   maxLength={field.maxLength}
-                  placeholder={field.placeholder[locale]}
+                  placeholder={sampleIn(field.placeholder, locale)}
                   required={field.required}
                   onChange={(e) => setField(field.id, e.target.value)}
                   data-id={id}

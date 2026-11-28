@@ -5,8 +5,24 @@
  * project/layouts/) dressed in a theme (AI-drawn art and colours, under project/themes/); see project.ts.
  */
 
-export type Locale = 'vi' | 'en';
+import { TEMPLATE_TEXT_ZH_CN } from './catalog-zh-cn';
+
+/** The languages of the shared shell (`@achoo254/app-shell`): Vietnamese, English and Simplified Chinese. */
+export const LOCALES = ['vi', 'en', 'zh-CN'] as const;
+export type Locale = (typeof LOCALES)[number];
+/** A UI text (names, labels, descriptions) in every language. */
 export type Localized = Readonly<Record<Locale, string>>;
+
+/**
+ * Text that goes into the video itself (a template's sample lines): Vietnamese and English only. The video fonts
+ * (Be Vietnam Pro) have no Chinese glyphs and the voices read Vietnamese, so a Chinese page shows the English samples.
+ */
+export type SampleText = Readonly<Record<'vi' | 'en', string>>;
+
+/** A template's sample text in the page language (see SampleText). */
+export function sampleIn(sample: SampleText, locale: Locale): string {
+  return locale === 'zh-CN' ? sample.en : sample[locale];
+}
 
 /** One allowed value of a choice field: an id the composition maps to a bundled asset, and its name. */
 export interface Choice {
@@ -18,7 +34,7 @@ export interface TextField {
   /** Composition variable id. */
   readonly id: string;
   readonly label: Localized;
-  readonly placeholder: Localized;
+  readonly placeholder: SampleText;
   readonly maxLength: number;
   readonly required: boolean;
   /**
@@ -51,8 +67,8 @@ export interface LayoutSpec {
   readonly fields: readonly FieldShape[];
 }
 
-const line = (n: number): FieldShape => ({ id: `line${n}`, label: { vi: `Dòng ${n}`, en: `Line ${n}` }, maxLength: 60, required: true });
-const point = (n: number, required: boolean): FieldShape => ({ id: `point${n}`, label: { vi: `Ý ${n}`, en: `Point ${n}` }, maxLength: 80, required });
+const line = (n: number): FieldShape => ({ id: `line${n}`, label: { vi: `Dòng ${n}`, en: `Line ${n}`, 'zh-CN': `第 ${n} 行` }, maxLength: 60, required: true });
+const point = (n: number, required: boolean): FieldShape => ({ id: `point${n}`, label: { vi: `Ý ${n}`, en: `Point ${n}`, 'zh-CN': `要点 ${n}` }, maxLength: 80, required });
 
 /** A choice field: its length limit is that of its longest id. */
 function choice(id: string, label: Localized, required: boolean, choices: readonly Choice[]): FieldShape {
@@ -61,47 +77,48 @@ function choice(id: string, label: Localized, required: boolean, choices: readon
 
 /** The 12 con giáp (Vietnamese zodiac: Mão is the cat, Sửu the buffalo); ids as in themes/la-so/animal-<id>.webp. */
 export const ZODIAC_CHOICES: readonly Choice[] = [
-  { id: 'ty', label: { vi: 'Tý (Chuột)', en: 'Tý (Rat)' } },
-  { id: 'suu', label: { vi: 'Sửu (Trâu)', en: 'Sửu (Buffalo)' } },
-  { id: 'dan', label: { vi: 'Dần (Hổ)', en: 'Dần (Tiger)' } },
-  { id: 'mao', label: { vi: 'Mão (Mèo)', en: 'Mão (Cat)' } },
-  { id: 'thin', label: { vi: 'Thìn (Rồng)', en: 'Thìn (Dragon)' } },
-  { id: 'ti', label: { vi: 'Tỵ (Rắn)', en: 'Tỵ (Snake)' } },
-  { id: 'ngo', label: { vi: 'Ngọ (Ngựa)', en: 'Ngọ (Horse)' } },
-  { id: 'mui', label: { vi: 'Mùi (Dê)', en: 'Mùi (Goat)' } },
-  { id: 'than', label: { vi: 'Thân (Khỉ)', en: 'Thân (Monkey)' } },
-  { id: 'dau', label: { vi: 'Dậu (Gà)', en: 'Dậu (Rooster)' } },
-  { id: 'tuat', label: { vi: 'Tuất (Chó)', en: 'Tuất (Dog)' } },
-  { id: 'hoi', label: { vi: 'Hợi (Lợn)', en: 'Hợi (Pig)' } },
+  { id: 'ty', label: { vi: 'Tý (Chuột)', en: 'Tý (Rat)', 'zh-CN': 'Tý（鼠）' } },
+  { id: 'suu', label: { vi: 'Sửu (Trâu)', en: 'Sửu (Buffalo)', 'zh-CN': 'Sửu（牛）' } },
+  { id: 'dan', label: { vi: 'Dần (Hổ)', en: 'Dần (Tiger)', 'zh-CN': 'Dần（虎）' } },
+  { id: 'mao', label: { vi: 'Mão (Mèo)', en: 'Mão (Cat)', 'zh-CN': 'Mão（猫）' } },
+  { id: 'thin', label: { vi: 'Thìn (Rồng)', en: 'Thìn (Dragon)', 'zh-CN': 'Thìn（龙）' } },
+  { id: 'ti', label: { vi: 'Tỵ (Rắn)', en: 'Tỵ (Snake)', 'zh-CN': 'Tỵ（蛇）' } },
+  { id: 'ngo', label: { vi: 'Ngọ (Ngựa)', en: 'Ngọ (Horse)', 'zh-CN': 'Ngọ（马）' } },
+  { id: 'mui', label: { vi: 'Mùi (Dê)', en: 'Mùi (Goat)', 'zh-CN': 'Mùi（羊）' } },
+  { id: 'than', label: { vi: 'Thân (Khỉ)', en: 'Thân (Monkey)', 'zh-CN': 'Thân（猴）' } },
+  { id: 'dau', label: { vi: 'Dậu (Gà)', en: 'Dậu (Rooster)', 'zh-CN': 'Dậu（鸡）' } },
+  { id: 'tuat', label: { vi: 'Tuất (Chó)', en: 'Tuất (Dog)', 'zh-CN': 'Tuất（狗）' } },
+  { id: 'hoi', label: { vi: 'Hợi (Lợn)', en: 'Hợi (Pig)', 'zh-CN': 'Hợi（猪）' } },
 ];
 
-const same = (name: string): Localized => ({ vi: name, en: name });
+/** A term of the art kept in Vietnamese (the video shows it so), with its Chinese name on a Chinese page. */
+const term = (name: string, zh: string): Localized => ({ vi: name, en: name, 'zh-CN': `${name}（${zh}）` });
 
 /** The 14 chính tinh (major stars); ids as in themes/la-so/star-<id>.webp. */
 export const STAR_CHOICES: readonly Choice[] = [
-  { id: 'tu-vi', label: same('Tử Vi') },
-  { id: 'thien-co', label: same('Thiên Cơ') },
-  { id: 'thai-duong', label: same('Thái Dương') },
-  { id: 'vu-khuc', label: same('Vũ Khúc') },
-  { id: 'thien-dong', label: same('Thiên Đồng') },
-  { id: 'liem-trinh', label: same('Liêm Trinh') },
-  { id: 'thien-phu', label: same('Thiên Phủ') },
-  { id: 'thai-am', label: same('Thái Âm') },
-  { id: 'tham-lang', label: same('Tham Lang') },
-  { id: 'cu-mon', label: same('Cự Môn') },
-  { id: 'thien-tuong', label: same('Thiên Tướng') },
-  { id: 'thien-luong', label: same('Thiên Lương') },
-  { id: 'that-sat', label: same('Thất Sát') },
-  { id: 'pha-quan', label: same('Phá Quân') },
+  { id: 'tu-vi', label: term('Tử Vi', '紫微') },
+  { id: 'thien-co', label: term('Thiên Cơ', '天机') },
+  { id: 'thai-duong', label: term('Thái Dương', '太阳') },
+  { id: 'vu-khuc', label: term('Vũ Khúc', '武曲') },
+  { id: 'thien-dong', label: term('Thiên Đồng', '天同') },
+  { id: 'liem-trinh', label: term('Liêm Trinh', '廉贞') },
+  { id: 'thien-phu', label: term('Thiên Phủ', '天府') },
+  { id: 'thai-am', label: term('Thái Âm', '太阴') },
+  { id: 'tham-lang', label: term('Tham Lang', '贪狼') },
+  { id: 'cu-mon', label: term('Cự Môn', '巨门') },
+  { id: 'thien-tuong', label: term('Thiên Tướng', '天相') },
+  { id: 'thien-luong', label: term('Thiên Lương', '天梁') },
+  { id: 'that-sat', label: term('Thất Sát', '七杀') },
+  { id: 'pha-quan', label: term('Phá Quân', '破军') },
 ];
 
 /** The five cục (element classes); ids as in themes/la-so/cuc-<id>.webp. */
 export const CUC_CHOICES: readonly Choice[] = [
-  { id: 'thuy-nhi', label: same('Thủy Nhị Cục') },
-  { id: 'moc-tam', label: same('Mộc Tam Cục') },
-  { id: 'kim-tu', label: same('Kim Tứ Cục') },
-  { id: 'tho-ngu', label: same('Thổ Ngũ Cục') },
-  { id: 'hoa-luc', label: same('Hỏa Lục Cục') },
+  { id: 'thuy-nhi', label: term('Thủy Nhị Cục', '水二局') },
+  { id: 'moc-tam', label: term('Mộc Tam Cục', '木三局') },
+  { id: 'kim-tu', label: term('Kim Tứ Cục', '金四局') },
+  { id: 'tho-ngu', label: term('Thổ Ngũ Cục', '土五局') },
+  { id: 'hoa-luc', label: term('Hỏa Lục Cục', '火六局') },
 ];
 
 export const LAYOUTS: Readonly<Record<LayoutId, LayoutSpec>> = {
@@ -111,7 +128,7 @@ export const LAYOUTS: Readonly<Record<LayoutId, LayoutSpec>> = {
     durationSeconds: 18,
     photos: { min: 0, max: 3 },
     fields: [
-      { id: 'title', label: { vi: 'Tiêu đề', en: 'Title' }, maxLength: 50, required: true },
+      { id: 'title', label: { vi: 'Tiêu đề', en: 'Title', 'zh-CN': '标题' }, maxLength: 50, required: true },
       point(1, true),
       point(2, true),
       point(3, true),
@@ -124,8 +141,8 @@ export const LAYOUTS: Readonly<Record<LayoutId, LayoutSpec>> = {
     durationSeconds: 10,
     photos: { min: 0, max: 0 },
     fields: [
-      { id: 'quote', label: { vi: 'Câu trích dẫn', en: 'Quote' }, maxLength: 160, required: true },
-      { id: 'author', label: { vi: 'Tác giả', en: 'Author' }, maxLength: 40, required: false },
+      { id: 'quote', label: { vi: 'Câu trích dẫn', en: 'Quote', 'zh-CN': '引言' }, maxLength: 160, required: true },
+      { id: 'author', label: { vi: 'Tác giả', en: 'Author', 'zh-CN': '作者' }, maxLength: 40, required: false },
     ],
   },
   // A birth chart (lá số tử vi) as a card: the zodiac animal, the major star of the Mệnh palace and the cục emblem
@@ -135,13 +152,13 @@ export const LAYOUTS: Readonly<Record<LayoutId, LayoutSpec>> = {
     durationSeconds: 18,
     photos: { min: 0, max: 0 },
     fields: [
-      { id: 'name', label: { vi: 'Tên', en: 'Name' }, maxLength: 40, required: false },
+      { id: 'name', label: { vi: 'Tên', en: 'Name', 'zh-CN': '姓名' }, maxLength: 40, required: false },
       line(1),
       line(2),
-      { id: 'reading', label: { vi: 'Lời luận giải', en: 'Reading' }, maxLength: 160, required: true },
-      choice('animal', { vi: 'Con giáp', en: 'Zodiac animal' }, true, ZODIAC_CHOICES),
-      choice('star', { vi: 'Chính tinh ở Mệnh', en: 'Major star in Mệnh' }, false, STAR_CHOICES),
-      choice('cuc', { vi: 'Cục', en: 'Cục (element class)' }, true, CUC_CHOICES),
+      { id: 'reading', label: { vi: 'Lời luận giải', en: 'Reading', 'zh-CN': '解读' }, maxLength: 160, required: true },
+      choice('animal', { vi: 'Con giáp', en: 'Zodiac animal', 'zh-CN': '生肖' }, true, ZODIAC_CHOICES),
+      choice('star', { vi: 'Chính tinh ở Mệnh', en: 'Major star in Mệnh', 'zh-CN': '命宫主星' }, false, STAR_CHOICES),
+      choice('cuc', { vi: 'Cục', en: 'Cục (element class)', 'zh-CN': '五行局' }, true, CUC_CHOICES),
     ],
   },
 };
@@ -150,12 +167,12 @@ export const LAYOUTS: Readonly<Record<LayoutId, LayoutSpec>> = {
 export const OCCASIONS = ['celebrate', 'holiday', 'love', 'family', 'share', 'business'] as const;
 export type Occasion = (typeof OCCASIONS)[number];
 export const OCCASION_NAMES: Readonly<Record<Occasion, Localized>> = {
-  celebrate: { vi: 'Chúc mừng', en: 'Celebrate' },
-  holiday: { vi: 'Lễ, Tết', en: 'Holidays' },
-  love: { vi: 'Yêu thương', en: 'Love' },
-  family: { vi: 'Gia đình', en: 'Family' },
-  share: { vi: 'Chia sẻ', en: 'Share' },
-  business: { vi: 'Kinh doanh', en: 'Business' },
+  celebrate: { vi: 'Chúc mừng', en: 'Celebrate', 'zh-CN': '庆祝' },
+  holiday: { vi: 'Lễ, Tết', en: 'Holidays', 'zh-CN': '节日' },
+  love: { vi: 'Yêu thương', en: 'Love', 'zh-CN': '爱情' },
+  family: { vi: 'Gia đình', en: 'Family', 'zh-CN': '家庭' },
+  share: { vi: 'Chia sẻ', en: 'Share', 'zh-CN': '分享' },
+  business: { vi: 'Kinh doanh', en: 'Business', 'zh-CN': '商业' },
 };
 
 /**
@@ -298,10 +315,11 @@ interface ThemeEntry {
   readonly music: SharedTrack;
   readonly musicGroup: MusicGroup;
   readonly occasions: readonly Occasion[];
-  readonly name: Localized;
-  readonly description: Localized;
+  /** Name and description in Vietnamese and English; the Chinese ones are in catalog-zh-cn.ts. */
+  readonly name: SampleText;
+  readonly description: SampleText;
   /** Sample text per field id, shown as placeholder and in the preview until the person types. */
-  readonly samples: Readonly<Record<string, Localized>>;
+  readonly samples: Readonly<Record<string, SampleText>>;
   /** Background pictures of the theme when not BACKGROUND_VARIANTS. */
   readonly backgrounds?: number;
   /** The theme folder has bg.mp4 (see TemplateSpec.videoBackground). */
@@ -927,8 +945,8 @@ export const TEMPLATES: readonly TemplateSpec[] = ENTRIES.map((entry) => {
     music: entry.music,
     musicGroup: entry.musicGroup,
     occasions: entry.occasions,
-    name: entry.name,
-    description: entry.description,
+    name: { ...entry.name, 'zh-CN': TEMPLATE_TEXT_ZH_CN[entry.id].name },
+    description: { ...entry.description, 'zh-CN': TEMPLATE_TEXT_ZH_CN[entry.id].description },
     backgrounds: entry.backgrounds ?? BACKGROUND_VARIANTS,
     videoBackground: entry.videoBackground ?? false,
     durationSeconds: layout.durationSeconds,

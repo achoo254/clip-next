@@ -1,6 +1,10 @@
 import type { Locale } from '@clip/templates';
+import { zhCN } from './messages-zh-cn';
 
-/** Every UI string, Vietnamese first (the default), English second. `{name}` placeholders are filled by `t`. */
+/**
+ * Every UI string, Vietnamese first (the default), English second; Simplified Chinese is in messages-zh-cn.ts.
+ * `{name}` placeholders are filled by `t`.
+ */
 const vi = {
   'chrome.skip': 'Bỏ qua tới nội dung',
   'chrome.nav': 'Điều hướng',
@@ -273,4 +277,4 @@ const en: Record<MessageKey, string> = {
   'notFound.back': 'Back home',
 };
 
-export const DICTIONARIES: Readonly<Record<Locale, Readonly<Record<MessageKey, string>>>> = { vi, en };
+export const DICTIONARIES: Readonly<Record<Locale, Readonly<Record<MessageKey, string>>>> = { vi, en, 'zh-CN': zhCN };

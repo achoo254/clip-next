@@ -105,6 +105,25 @@ describe('signed-out welcome', () => {
     expect(document.documentElement.lang).toBe('en');
   });
 
+  it('speaks the third shell language, Simplified Chinese, and keeps it in the shared cookie', async () => {
+    answerMe({ signedIn: false, signInAvailable: true });
+    show('/', <IntroPage />);
+    fireEvent.click(screen.getByRole('button', { name: '中文' }));
+    const cta = await screen.findByRole('link', { name: '使用 hoandat.com 登录' });
+    expect(cta.getAttribute('href')).toBe('/auth/login?return=%2Ftao&lang=zh-CN');
+    expect(screen.getByRole('link', { name: 'hoandat.com 旗下应用' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: '中文' }).getAttribute('aria-pressed')).toBe('true');
+    expect(document.cookie).toContain('hd_lang=zh-CN');
+    expect(document.documentElement.lang).toBe('zh-CN');
+  });
+
+  it('opens in Simplified Chinese when another hoandat.com app picked it', async () => {
+    document.cookie = 'hd_lang=zh-CN; Path=/';
+    answerMe({ signedIn: false, signInAvailable: true });
+    show('/', <IntroPage />);
+    expect(await screen.findByRole('link', { name: '使用 hoandat.com 登录' })).not.toBeNull();
+  });
+
   it('opens in the language picked before the shared choice', async () => {
     window.localStorage.setItem('clip.locale', 'en');
     answerMe({ signedIn: false, signInAvailable: true });

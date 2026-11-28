@@ -16,23 +16,41 @@ export function createPath(spec: TemplateSpec): string {
 }
 
 export function templatePageTitle(spec: TemplateSpec, locale: Locale): string {
-  return locale === 'vi' ? `Mẫu video ${spec.name.vi} miễn phí` : `${spec.name.en} video template, free`;
+  const titles: Record<Locale, string> = {
+    vi: `Mẫu video ${spec.name.vi} miễn phí`,
+    en: `${spec.name.en} video template, free`,
+    'zh-CN': `免费${spec.name['zh-CN']}视频模板`,
+  };
+  return titles[locale];
 }
 
 export function templatePageDescription(spec: TemplateSpec, locale: Locale): string {
-  return locale === 'vi'
-    ? `${spec.description.vi} Gõ vài dòng, thêm ảnh, xem trước ngay và tải video MP4 dọc 9:16, 4:5 hoặc vuông. Miễn phí.`
-    : `${spec.description.en} Type a few lines, add photos, preview it at once and download an MP4 in 9:16, 4:5 or square. Free.`;
+  const descriptions: Record<Locale, string> = {
+    vi: `${spec.description.vi} Gõ vài dòng, thêm ảnh, xem trước ngay và tải video MP4 dọc 9:16, 4:5 hoặc vuông. Miễn phí.`,
+    en: `${spec.description.en} Type a few lines, add photos, preview it at once and download an MP4 in 9:16, 4:5 or square. Free.`,
+    'zh-CN': `${spec.description['zh-CN']}写几行字、加照片，立即预览，下载竖屏 9:16、4:5 或方形的 MP4 视频。免费。`,
+  };
+  return descriptions[locale];
 }
 
+const INDEX_TITLES: Readonly<Record<Locale, string>> = {
+  vi: 'Mẫu video chúc mừng, lễ Tết, kỷ niệm miễn phí',
+  en: 'Free video templates for greetings, holidays and more',
+  'zh-CN': '免费的祝福、节日、纪念日视频模板',
+};
+
 export function templatesIndexTitle(locale: Locale): string {
-  return locale === 'vi' ? 'Mẫu video chúc mừng, lễ Tết, kỷ niệm miễn phí' : 'Free video templates for greetings, holidays and more';
+  return INDEX_TITLES[locale];
 }
 
 export function templatesIndexDescription(locale: Locale): string {
-  return locale === 'vi'
-    ? `${TEMPLATES.length} mẫu video vẽ bằng AI theo dịp: sinh nhật, 20/11, Tết, cưới, kỷ niệm, khai trương. Chọn mẫu, gõ chữ, thêm ảnh và tải MP4.`
-    : `${TEMPLATES.length} AI-drawn video templates by occasion: birthdays, holidays, weddings, anniversaries, openings. Pick one, type, add photos, download the MP4.`;
+  const count = TEMPLATES.length;
+  const descriptions: Record<Locale, string> = {
+    vi: `${count} mẫu video vẽ bằng AI theo dịp: sinh nhật, 20/11, Tết, cưới, kỷ niệm, khai trương. Chọn mẫu, gõ chữ, thêm ảnh và tải MP4.`,
+    en: `${count} AI-drawn video templates by occasion: birthdays, holidays, weddings, anniversaries, openings. Pick one, type, add photos, download the MP4.`,
+    'zh-CN': `${count} 个 AI 绘制的场合视频模板：生日、教师节、春节、婚礼、纪念日、开业。选模板、写文字、加照片，下载 MP4。`,
+  };
+  return descriptions[locale];
 }
 
 export interface OccasionGroup {

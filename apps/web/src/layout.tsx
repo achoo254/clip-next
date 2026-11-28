@@ -9,7 +9,8 @@ import { brand, HOME_URL } from './brand';
 import { LOCALES, useI18n } from './i18n';
 
 /** Each language in its own words, never translated; the switch shows the short code. */
-const LOCALE_NAMES: Readonly<Record<Locale, string>> = { vi: 'Tiếng Việt', en: 'English' };
+const LOCALE_NAMES: Readonly<Record<Locale, string>> = { vi: 'Tiếng Việt', en: 'English', 'zh-CN': '中文' };
+const LOCALE_CODES: Readonly<Record<Locale, string>> = { vi: 'VI', en: 'EN', 'zh-CN': '中文' };
 
 /** Path plus query of the current page: where sign-in comes back to. */
 export function useHere(): string {
@@ -41,7 +42,7 @@ function LanguageSwitch(): ReactNode {
           }}
           data-id={`lang-${option}`}
         >
-          {option.toUpperCase()}
+          {LOCALE_CODES[option]}
         </button>
       ))}
     </fieldset>

@@ -22,9 +22,9 @@ export interface Voice {
   readonly charsPerSecond: number;
 }
 
-const NATURAL: Localized = { vi: 'tự nhiên', en: 'natural' };
-const NEWS: Localized = { vi: 'đọc tin', en: 'newsreader' };
-const STORY: Localized = { vi: 'kể chuyện', en: 'storyteller' };
+const NATURAL: Localized = { vi: 'tự nhiên', en: 'natural', 'zh-CN': '自然' };
+const NEWS: Localized = { vi: 'đọc tin', en: 'newsreader', 'zh-CN': '新闻播报' };
+const STORY: Localized = { vi: 'kể chuyện', en: 'storyteller', 'zh-CN': '讲故事' };
 
 /** All 11 preset voices of VieNeu-TTS v3 Nano; the first is the default. */
 export const VOICES: readonly Voice[] = [

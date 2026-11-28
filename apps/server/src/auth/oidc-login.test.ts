@@ -13,6 +13,9 @@ describe('sign-in state', () => {
     expect(openState(sealed, 'x'.repeat(40), 1_000_000)).toBeNull();
     expect(openState(`${sealed}x`, KEY, 1_000_000)).toBeNull();
     expect(openState(sealed, KEY, 1_000_000 + 601_000)).toBeNull();
+    // A sign-in started in Simplified Chinese keeps its language.
+    const zh = newLoginState('/video', 'zh-CN', 1_000_000);
+    expect(openState(sealState(zh, KEY), KEY, 1_000_000)?.lang).toBe('zh-CN');
   });
 
   it('only returns to local paths', () => {
